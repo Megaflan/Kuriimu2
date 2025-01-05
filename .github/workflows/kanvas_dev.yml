@@ -24,11 +24,15 @@ jobs:
       uses: softprops/turnstyle@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0
+
+    - name: Setup NuGet sources
+      run: |
+        nuget sources add -name Kuriimu2 -source https://nuget.pkg.github.com/FanTranslatorsInternational/index.json
 
     - name: Build Nuget
       run: dotnet build ./src/lib/Kanvas/Kanvas.csproj --configuration Release
