@@ -10,7 +10,6 @@ on:
       - 'src/lib/Komponent/*.cs'
       - 'src/lib/Komponent.Contract/*.csproj'
       - 'src/lib/Komponent.Contract/*.cs'
-  workflow_dispatch:
 
 jobs:
   build:
