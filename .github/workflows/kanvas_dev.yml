@@ -32,7 +32,7 @@ jobs:
 
     - name: Setup NuGet sources
       run: |
-        nuget sources add -name Kuriimu2 -source https://nuget.pkg.github.com/FanTranslatorsInternational/index.json
+        dotnet nuget add source https://nuget.pkg.github.com/FanTranslatorsInternational/index.json --name Kuriimu2 --username onepiecefreak3 --password ${{ secrets.NUGET_UPDATE }}
 
     - name: Build Nuget
       run: dotnet build ./src/lib/Kanvas/Kanvas.csproj --configuration Release
