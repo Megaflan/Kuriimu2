@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Drawing;
+﻿using Kanvas.Contract;
+using Kanvas.Contract.DataClasses;
+using Kanvas.Contract.Encoding;
 using Kanvas.Encoding;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
+using SixLabors.ImageSharp;
 
 namespace Kanvas.Swizzle
 {
@@ -66,7 +64,7 @@ namespace Kanvas.Swizzle
         public int Width { get; }
         public int Height { get; }
 
-        public NxSwizzle(SwizzlePreparationContext context, int swizzleMode = -1)
+        public NxSwizzle(SwizzleOptions context, int swizzleMode = -1)
         {
             (Width, Height) = PadSizeToBlocks(context.Size.Width, context.Size.Height, context.EncodingInfo);
 

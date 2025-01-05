@@ -1,7 +1,5 @@
-﻿using System;
-using System.Linq;
-using System.Drawing;
-using System.Reflection.Emit;
+﻿using System.Reflection.Emit;
+using SixLabors.ImageSharp;
 
 // TODO: Optimization possible for consecutive power of 2 coordinates in the same dimension
 namespace Kanvas.Swizzle

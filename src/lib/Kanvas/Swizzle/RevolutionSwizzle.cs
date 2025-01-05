@@ -1,8 +1,6 @@
-﻿using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
+﻿using Kanvas.Contract;
+using Kanvas.Contract.DataClasses;
+using SixLabors.ImageSharp;
 
 namespace Kanvas.Swizzle
 {
@@ -24,7 +22,7 @@ namespace Kanvas.Swizzle
         public int Width { get; }
         public int Height { get; }
 
-        public RevolutionSwizzle(SwizzlePreparationContext context)
+        public RevolutionSwizzle(SwizzleOptions context)
         {
             var widthStride = _bitFields[context.EncodingInfo.BitDepth].Sum(x => x.Item1);
             var heightStride = _bitFields[context.EncodingInfo.BitDepth].Sum(x => x.Item2);

@@ -1,11 +1,7 @@
-﻿using System;
-using System.Drawing;
-using System.Linq;
-using System.Text;
+﻿using System.Text;
 using System.Text.RegularExpressions;
-using Komponent.Utilities;
-using Kontract;
-using Kontract.Kanvas.Interfaces;
+using Kanvas.Contract.Encoding.Descriptor;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Kanvas.Encoding.Descriptors
 {
@@ -56,7 +52,7 @@ namespace Kanvas.Encoding.Descriptors
             return _depthTable[0] + _depthTable[1] + _depthTable[2] + _depthTable[3];
         }
 
-        public Color GetColor(long value)
+        public Rgba32 GetColor(long value)
         {
             // colorBuffer[4] is reserved for the X color component, and will be ignored when the color is constructed
             var colorBuffer = new int[5];
@@ -70,10 +66,10 @@ namespace Kanvas.Encoding.Descriptors
             if (_depthTable[_componentIndexTable[0]] == 0)
                 colorBuffer[_indexTable[_componentIndexTable[0]]] = 255;
 
-            return Color.FromArgb(colorBuffer[0], colorBuffer[1], colorBuffer[2], colorBuffer[3]);
+            return new Rgba32((byte)colorBuffer[1], (byte)colorBuffer[2], (byte)colorBuffer[3], (byte)colorBuffer[0]);
         }
 
-        public long GetValue(Color color)
+        public long GetValue(Rgba32 color)
         {
             // colorBuffer[4] is reserved for the X color component
             var colorBuffer = new[] { color.A, color.R, color.G, color.B, 0 };
@@ -97,8 +93,8 @@ namespace Kanvas.Encoding.Descriptors
 
         private void AssertValidOrder(string componentOrder)
         {
-            ContractAssertions.IsNotNull(componentOrder, nameof(componentOrder));
-            ContractAssertions.IsInRange(componentOrder.Length, nameof(componentOrder), 1, 4);
+            if (componentOrder.Length is < 1 or > 4)
+                throw new ArgumentOutOfRangeException(nameof(componentOrder), "Value needs to be in range 1..4");
 
             if (!Regex.IsMatch(componentOrder, "^[rgbax]{1,4}$"))
                 throw new InvalidOperationException($"'{componentOrder}' contains invalid characters.");
@@ -109,7 +105,9 @@ namespace Kanvas.Encoding.Descriptors
 
         private void AssertBitDepth(int bitDepth)
         {
-            ContractAssertions.IsInRange(bitDepth, nameof(bitDepth), 4, 32);
+            if (bitDepth is < 4 or > 32)
+                throw new ArgumentOutOfRangeException(nameof(bitDepth), "Value needs to be in range 4..32");
+            
         }
 
         private void SetupLookupTables(string componentOrder, int r, int g, int b, int a)

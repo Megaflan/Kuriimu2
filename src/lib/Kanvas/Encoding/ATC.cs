@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using BCnEncoder.Decoder;
+﻿using BCnEncoder.Decoder;
 using BCnEncoder.Encoder;
 using BCnEncoder.Shared;
-using Kanvas.MoreEnumerable;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
+using Kanvas.Contract.DataClasses;
+using Kanvas.Contract.Encoding;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Kanvas.Encoding
 {
@@ -40,7 +36,7 @@ namespace Kanvas.Encoding
         }
 
         /// <inheritdoc cref="Load"/>
-        public IEnumerable<Color> Load(byte[] input, EncodingLoadContext loadContext)
+        public IEnumerable<Rgba32> Load(byte[] input, EncodingOptions options)
         {
             var compressionFormat = GetCompressionFormat();
             var decoder = GetDecoder();
@@ -48,33 +44,33 @@ namespace Kanvas.Encoding
             var blockSize = BitsPerValue / 8;
             return Enumerable.Range(0, input.Length/blockSize).AsParallel()
                 .AsOrdered()
-                .WithDegreeOfParallelism(loadContext.TaskCount)
+                .WithDegreeOfParallelism(options.TaskCount)
                 .SelectMany(x =>
                 {
                     var decodedBlock = decoder.DecodeBlock(input.AsSpan(x * blockSize, blockSize), compressionFormat);
 
                     decodedBlock.TryGetMemory(out var memory);
-                    return memory.ToArray().Select(y => Color.FromArgb(y.a, y.r, y.g, y.b));
+                    return memory.ToArray().Select(y => new Rgba32( y.r, y.g, y.b, y.a));
                 });
         }
 
         /// <inheritdoc cref="Save"/>
-        public byte[] Save(IEnumerable<Color> colors, EncodingSaveContext saveContext)
+        public byte[] Save(IEnumerable<Rgba32> colors, EncodingOptions options)
         {
             var compressionFormat = GetCompressionFormat();
             var encoder = GetEncoder(compressionFormat);
 
             var blockSize = BitsPerValue / 8;
-            var widthBlocks = ((saveContext.Size.Width + 3) & ~3) >> 2;
-            var heightBlocks = ((saveContext.Size.Height + 3) & ~3) >> 2;
+            var widthBlocks = ((options.Size.Width + 3) & ~3) >> 2;
+            var heightBlocks = ((options.Size.Height + 3) & ~3) >> 2;
             var buffer = new byte[widthBlocks * heightBlocks * blockSize];
 
             colors.Chunk(ColorsPerValue).Select((x, i) => (x, i))
                 .AsParallel()
-                .WithDegreeOfParallelism(saveContext.TaskCount)
+                .WithDegreeOfParallelism(options.TaskCount)
                 .ForAll(element =>
                 {
-                    var encodedBlock = encoder.EncodeBlock(element.x.Select(y => new ColorRgba32(y.R, y.G, y.B, y.A)).ToArray());
+                    byte[] encodedBlock = encoder.EncodeBlock(element.x.Select(y => new ColorRgba32(y.R, y.G, y.B, y.A)).ToArray());
                     Array.Copy(encodedBlock, 0, buffer, element.i * blockSize, blockSize);
                 });
 

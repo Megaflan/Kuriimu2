@@ -1,7 +1,6 @@
-﻿using System;
-using Kanvas.Encoding.Base;
+﻿using Kanvas.Encoding.Base;
 using Kanvas.Encoding.Descriptors;
-using Kontract.Models.IO;
+using Komponent.Contract.Enums;
 
 namespace Kanvas.Encoding
 {

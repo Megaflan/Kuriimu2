@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
+﻿using Kanvas.Contract;
+using Kanvas.Contract.DataClasses;
+using SixLabors.ImageSharp;
 
 namespace Kanvas.Swizzle
 {
@@ -33,7 +30,7 @@ namespace Kanvas.Swizzle
         public int Width { get; }
         public int Height { get; }
 
-        public CafeSwizzle(SwizzlePreparationContext context, byte swizzleTileMode)
+        public CafeSwizzle(SwizzleOptions context, byte swizzleTileMode)
         {
             var isBlockBased = context.EncodingInfo.ColorsPerValue > 1;
             var bitDepth = context.EncodingInfo.BitDepth;

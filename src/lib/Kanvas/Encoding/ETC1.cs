@@ -1,11 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using Kanvas.Encoding.Base;
-using Kanvas.Encoding.BlockCompressions;
-using Kanvas.Encoding.BlockCompressions.ETC1.Models;
+﻿using Kanvas.Encoding.Base;
+using Kanvas.Encoding.BlockCompression.Etc1;
+using Kanvas.Encoding.BlockCompression.Etc1.Models;
+using Komponent.Contract.Enums;
 using Komponent.IO;
-using Kontract.Models.IO;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Kanvas.Encoding
 {
@@ -41,7 +39,7 @@ namespace Kanvas.Encoding
             FormatName = "ETC1" + (useAlpha ? "A4" : "");
         }
 
-        protected override Etc1PixelData ReadNextBlock(BinaryReaderX br)
+        protected override Etc1PixelData ReadBlock(BinaryReaderX br)
         {
             var alpha = _useAlpha ? br.ReadUInt64() : ulong.MaxValue;
             var colors = br.ReadUInt64();
@@ -61,18 +59,18 @@ namespace Kanvas.Encoding
             };
         }
 
-        protected override void WriteNextBlock(BinaryWriterX bw, Etc1PixelData block)
+        protected override void WriteBlock(BinaryWriterX bw, Etc1PixelData block)
         {
             if (_useAlpha) bw.Write(block.Alpha);
             bw.Write(block.Block.GetBlockData());
         }
 
-        protected override IList<Color> DecodeNextBlock(Etc1PixelData block)
+        protected override IList<Rgba32> DecodeBlock(Etc1PixelData block)
         {
             return _transcoder.DecodeBlocks(block).ToArray();
         }
 
-        protected override Etc1PixelData EncodeNextBlock(IList<Color> colors)
+        protected override Etc1PixelData EncodeBlock(IList<Rgba32> colors)
         {
             return _transcoder.EncodeColors(colors);
         }

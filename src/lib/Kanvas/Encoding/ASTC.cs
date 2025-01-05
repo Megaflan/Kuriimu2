@@ -1,10 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using Kanvas.Native;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
+﻿using Kanvas.Contract.DataClasses;
+using Kanvas.Contract.Encoding;
+using Kanvas.Encoding.BlockCompression.Pvr;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Kanvas.Encoding
 {
@@ -36,10 +33,10 @@ namespace Kanvas.Encoding
         }
 
         /// <inheritdoc cref="Load"/>
-        public IEnumerable<Color> Load(byte[] tex, EncodingLoadContext loadContext)
+        public IEnumerable<Rgba32> Load(byte[] tex, EncodingOptions options)
         {
             // Initialize PVR Texture
-            var pvrTexture = PvrTexture.Create(tex, (uint)loadContext.Size.Width, (uint)loadContext.Size.Height, 1, (PixelFormat)_format, ChannelType.UnsignedByte, ColorSpace.Linear);
+            var pvrTexture = PvrTexture.Create(tex, (uint)options.Size.Width, (uint)options.Size.Height, 1, (PixelFormat)_format, ChannelType.UnsignedByte, ColorSpace.Linear);
 
             // Transcode texture to RGBA8888
             var successful = pvrTexture.Transcode(PixelFormat.RGBA8888, ChannelType.UnsignedByteNorm, ColorSpace.Linear, CompressionQuality.PVRTCHigh);
@@ -49,13 +46,13 @@ namespace Kanvas.Encoding
             // Yield colors
             var textureData = pvrTexture.GetData();
             for (var i = 0L; i < textureData.Length; i += 4)
-                yield return Color.FromArgb(textureData[i + 3], textureData[i], textureData[i + 1], textureData[i + 2]);
+                yield return new Rgba32(textureData[i], textureData[i + 1], textureData[i + 2], textureData[i + 3]);
         }
 
         /// <inheritdoc cref="Save"/>
-        public byte[] Save(IEnumerable<Color> colors, EncodingSaveContext saveContext)
+        public byte[] Save(IEnumerable<Rgba32> colors, EncodingOptions options)
         {
-            var colorData = new byte[saveContext.Size.Width * saveContext.Size.Height * 4];
+            var colorData = new byte[options.Size.Width * options.Size.Height * 4];
 
             var index = 0;
             foreach (var color in colors)
@@ -67,7 +64,7 @@ namespace Kanvas.Encoding
             }
 
             // Initialize PVR Texture
-            var pvrTexture = PvrTexture.Create(colorData, (uint)saveContext.Size.Width, (uint)saveContext.Size.Height, 1, PixelFormat.RGBA8888, ChannelType.UnsignedByteNorm, ColorSpace.Linear);
+            var pvrTexture = PvrTexture.Create(colorData, (uint)options.Size.Width, (uint)options.Size.Height, 1, PixelFormat.RGBA8888, ChannelType.UnsignedByteNorm, ColorSpace.Linear);
 
             // Transcode texture to ASTC
             pvrTexture.Transcode((PixelFormat)_format, ChannelType.UnsignedByteNorm, ColorSpace.Linear, CompressionQuality.PVRTCHigh);

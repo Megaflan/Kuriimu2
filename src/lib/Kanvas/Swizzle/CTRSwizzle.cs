@@ -1,7 +1,7 @@
-﻿using System.Drawing;
-using Kanvas.Swizzle.Models;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
+﻿using Kanvas.Contract;
+using Kanvas.Contract.DataClasses;
+using Kanvas.Contract.Enums.Swizzle;
+using SixLabors.ImageSharp;
 
 namespace Kanvas.Swizzle
 {
@@ -16,7 +16,7 @@ namespace Kanvas.Swizzle
         public int Width { get; }
         public int Height { get; }
 
-        public CtrSwizzle(SwizzlePreparationContext context, CtrTransformation transform = CtrTransformation.None)
+        public CtrSwizzle(SwizzleOptions context, CtrTransformation transform = CtrTransformation.None)
         {
             _transform = transform;
 

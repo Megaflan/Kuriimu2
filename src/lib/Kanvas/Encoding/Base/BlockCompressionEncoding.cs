@@ -1,12 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
-using Kanvas.MoreEnumerable;
+﻿using Kanvas.Contract.DataClasses;
+using Kanvas.Contract.Encoding;
+using Komponent.Contract.Enums;
 using Komponent.IO;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
-using Kontract.Models.IO;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Kanvas.Encoding.Base
 {
@@ -32,44 +28,51 @@ namespace Kanvas.Encoding.Base
         }
 
         /// <inheritdoc cref="Load"/>
-        public IEnumerable<Color> Load(byte[] input, EncodingLoadContext loadContext)
+        public IEnumerable<Rgba32> Load(byte[] input, EncodingOptions loadContext)
         {
-            var br = new BinaryReaderX(new MemoryStream(input), _byteOrder);
+            IEnumerable<TBlock> blocks = ReadBlocks(input);
 
-            return ReadBlocks(br).AsParallel().AsOrdered()
+            return blocks.AsParallel().AsOrdered()
                 .WithDegreeOfParallelism(loadContext.TaskCount)
-                .SelectMany(DecodeNextBlock);
+                .SelectMany(DecodeBlock);
         }
 
         /// <inheritdoc cref="Save"/>
-        public byte[] Save(IEnumerable<Color> colors, EncodingSaveContext saveContext)
+        public byte[] Save(IEnumerable<Rgba32> colors, EncodingOptions saveContext)
+        {
+            IEnumerable<TBlock> blocks = colors.Chunk(ColorsPerValue)
+                .AsParallel().AsOrdered()
+                .WithDegreeOfParallelism(saveContext.TaskCount)
+                .Select(c => EncodeBlock(c.ToArray()));
+
+            return WriteBlocks(blocks);
+        }
+
+        protected abstract TBlock ReadBlock(BinaryReaderX br);
+
+        protected abstract void WriteBlock(BinaryWriterX bw, TBlock block);
+
+        protected abstract IList<Rgba32> DecodeBlock(TBlock block);
+
+        protected abstract TBlock EncodeBlock(IList<Rgba32> colors);
+
+        private IEnumerable<TBlock> ReadBlocks(byte[] input)
+        {
+            var reader = new BinaryReaderX(new MemoryStream(input), _byteOrder);
+
+            while (reader.BaseStream.Position < reader.BaseStream.Length)
+                yield return ReadBlock(reader);
+        }
+
+        private byte[] WriteBlocks(IEnumerable<TBlock> blocks)
         {
             var ms = new MemoryStream();
             using var bw = new BinaryWriterX(ms, _byteOrder);
 
-            var blocks = colors.Chunk(ColorsPerValue)
-                .AsParallel().AsOrdered()
-                .WithDegreeOfParallelism(saveContext.TaskCount)
-                .Select(c => EncodeNextBlock(c.ToArray()));
-
-            foreach (var block in blocks)
-                WriteNextBlock(bw, block);
+            foreach (TBlock block in blocks)
+                WriteBlock(bw, block);
 
             return ms.ToArray();
-        }
-
-        protected abstract TBlock ReadNextBlock(BinaryReaderX br);
-
-        protected abstract void WriteNextBlock(BinaryWriterX bw, TBlock block);
-
-        protected abstract IList<Color> DecodeNextBlock(TBlock block);
-
-        protected abstract TBlock EncodeNextBlock(IList<Color> colors);
-
-        private IEnumerable<TBlock> ReadBlocks(BinaryReaderX br)
-        {
-            while (br.BaseStream.Position < br.BaseStream.Length)
-                yield return ReadNextBlock(br);
         }
     }
 }

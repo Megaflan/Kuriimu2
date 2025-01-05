@@ -1,12 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.IO;
-using System.Linq;
+﻿using Kanvas.Contract.DataClasses;
+using Kanvas.Contract.Encoding;
+using Kanvas.Contract.Encoding.Descriptor;
+using Komponent.Contract.Enums;
 using Komponent.IO;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
-using Kontract.Models.IO;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Kanvas.Encoding.Base
 {
@@ -47,7 +44,7 @@ namespace Kanvas.Encoding.Base
         }
 
         /// <inheritdoc cref="Load"/>
-        public IEnumerable<Color> Load(byte[] input, IList<Color> palette, EncodingLoadContext loadContext)
+        public IEnumerable<Rgba32> Load(byte[] input, IList<Rgba32> palette, EncodingOptions loadContext)
         {
             var br = new BinaryReaderX(new MemoryStream(input), _byteOrder, _bitOrder, 1);
 
@@ -57,7 +54,7 @@ namespace Kanvas.Encoding.Base
         }
 
         /// <inheritdoc cref="Save"/>
-        public byte[] Save(IEnumerable<int> indices, IList<Color> palette, EncodingSaveContext saveContext)
+        public byte[] Save(IEnumerable<int> indices, IList<Rgba32> palette, EncodingOptions saveContext)
         {
             var ms = new MemoryStream();
             using var bw = new BinaryWriterX(ms, _byteOrder, _bitOrder, 1);

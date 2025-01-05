@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
+﻿using Kanvas.Contract;
+using Kanvas.Contract.DataClasses;
+using SixLabors.ImageSharp;
 
 namespace Kanvas.Swizzle
 {
@@ -13,7 +11,7 @@ namespace Kanvas.Swizzle
         public int Width { get; }
         public int Height { get; }
 
-        public VitaSwizzle(SwizzlePreparationContext context)
+        public VitaSwizzle(SwizzleOptions context)
         {
             Width = (context.Size.Width + 3) & ~3;
             Height = (context.Size.Height + 3) & ~3;

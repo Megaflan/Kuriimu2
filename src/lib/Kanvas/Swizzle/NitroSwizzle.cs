@@ -1,6 +1,6 @@
-﻿using System.Drawing;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
+﻿using Kanvas.Contract;
+using Kanvas.Contract.DataClasses;
+using SixLabors.ImageSharp;
 
 namespace Kanvas.Swizzle
 {
@@ -14,7 +14,7 @@ namespace Kanvas.Swizzle
         public int Width { get; }
         public int Height { get; }
 
-        public NitroSwizzle(SwizzlePreparationContext context)
+        public NitroSwizzle(SwizzleOptions context)
         {
             _swizzle = new MasterSwizzle(context.Size.Width, new Point(0, 0), new[] { (1, 0), (2, 0), (4, 0), (0, 1), (0, 2), (0, 4) });
             (Width, Height) = ((context.Size.Width + 7) & ~7, (context.Size.Height + 7) & ~7);

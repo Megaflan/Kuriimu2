@@ -1,12 +1,9 @@
-﻿using System;
-using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using Kontract;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Kanvas.Models;
-using Kontract.Models.IO;
+﻿using System.Buffers.Binary;
+using Kanvas.Contract.DataClasses;
+using Kanvas.Contract.Encoding;
+using Kanvas.Contract.Encoding.Descriptor;
+using Komponent.Contract.Enums;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Kanvas.Encoding.Base
 {
@@ -30,8 +27,6 @@ namespace Kanvas.Encoding.Base
 
         protected PixelEncoding(IPixelDescriptor pixelDescriptor, ByteOrder byteOrder, BitOrder bitOrder)
         {
-            ContractAssertions.IsNotNull(pixelDescriptor, nameof(pixelDescriptor));
-
             _descriptor = pixelDescriptor;
 
             BitDepth = pixelDescriptor.GetBitDepth();
@@ -43,24 +38,24 @@ namespace Kanvas.Encoding.Base
         }
 
         /// <inheritdoc cref="Load"/>
-        public IEnumerable<Color> Load(byte[] input, EncodingLoadContext loadContext)
+        public IEnumerable<Rgba32> Load(byte[] input, EncodingOptions options)
         {
-            var bits = loadContext.Size.Width * loadContext.Size.Height * BitsPerValue;
+            var bits = options.Size.Width * options.Size.Height * BitsPerValue;
             var length = bits / 8 + (bits % 8 > 0 ? 1 : 0);
 
             return _readValuesDelegate(input, length).AsParallel().AsOrdered()
-                .WithDegreeOfParallelism(loadContext.TaskCount)
+                .WithDegreeOfParallelism(options.TaskCount)
                 .Select(v => _descriptor.GetColor(v));
         }
 
         /// <inheritdoc cref="Load"/>
-        public byte[] Save(IEnumerable<Color> colors, EncodingSaveContext saveContext)
+        public byte[] Save(IEnumerable<Rgba32> colors, EncodingOptions options)
         {
             var values = colors.AsParallel().AsOrdered()
-                .WithDegreeOfParallelism(saveContext.TaskCount)
+                .WithDegreeOfParallelism(options.TaskCount)
                 .Select(c => _descriptor.GetValue(c));
 
-            var bits = saveContext.Size.Width * saveContext.Size.Height * BitsPerValue;
+            var bits = options.Size.Width * options.Size.Height * BitsPerValue;
             var buffer = new byte[bits / 8 + (bits % 8 > 0 ? 1 : 0)];
             _writeValuesDelegate(values, buffer);
 

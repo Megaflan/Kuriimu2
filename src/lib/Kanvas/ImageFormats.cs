@@ -1,14 +1,12 @@
-﻿using Kanvas.Encoding;
-using Kanvas.Encoding.PlatformSpecific;
-using Kontract.Kanvas.Interfaces;
-using Kontract.Models.IO;
+﻿using Kanvas.Contract.Encoding;
+using Kanvas.Encoding;
+using Komponent.Contract.Enums;
+using Index = Kanvas.Encoding.Index;
 
 namespace Kanvas
 {
     public static class ImageFormats
     {
-        public static WiiImageFormats Wii { get; } = new WiiImageFormats();
-
         public static IColorEncoding Rgba1010102(ByteOrder byteOrder = ByteOrder.LittleEndian) => new Rgba(10, 10, 10, 2, byteOrder);
         public static IColorEncoding Rgba8888(ByteOrder byteOrder = ByteOrder.LittleEndian) => new Rgba(8, 8, 8, 8, byteOrder);
         public static IColorEncoding Rgb888() => new Rgba(8, 8, 8);
@@ -78,38 +76,5 @@ namespace Kanvas
         public static IColorEncoding Astc10x10() => new Astc(AstcFormat.ASTC_10x10);
         public static IColorEncoding Astc12x10() => new Astc(AstcFormat.ASTC_12x10);
         public static IColorEncoding Astc12x12() => new Astc(AstcFormat.ASTC_12x12);
-
-        /*
-        ASTC_3x3x3,
-        ASTC_4x3x3,
-        ASTC_4x4x3,
-        ASTC_4x4x4,
-        ASTC_5x4x4,
-        ASTC_5x5x4,
-        ASTC_5x5x5,
-        ASTC_6x5x5,
-        ASTC_6x6x5,
-        ASTC_6x6x6, */
-    }
-
-    /* Formats configured as per http://wiki.tockdom.com/wiki/Image_Formats */
-    public class WiiImageFormats
-    {
-        internal WiiImageFormats() { }
-
-        public IColorEncoding L4() => new La(4, 0);
-        public IColorEncoding L8() => new La(8, 0);
-        public IColorEncoding La44() => new La(4, 4, "AL");
-        public IColorEncoding La88() => new La(8, 8, "AL", ByteOrder.BigEndian);
-
-        public IColorEncoding Rgb565() => new Rgba(5, 6, 5, ByteOrder.BigEndian);
-        public IColorEncoding Rgb5A3() => new Rgb5A3();
-        public IColorEncoding Rgba8888() => new Rgba8();
-
-        public IIndexEncoding I4() => new Index(4);
-        public IIndexEncoding I8() => new Index(8);
-        public IIndexEncoding I14() => new Index(14, ByteOrder.BigEndian);
-
-        public IColorEncoding Cmpr() => new Bc(BcFormat.Bc1);
     }
 }

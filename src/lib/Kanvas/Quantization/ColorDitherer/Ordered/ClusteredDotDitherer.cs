@@ -1,0 +1,20 @@
+﻿using SixLabors.ImageSharp;
+
+namespace Kanvas.Quantization.ColorDitherer.Ordered
+{
+    public class ClusteredDotDitherer : OrderedDitherer
+    {
+        protected override byte[,] Matrix => new byte[,]
+        {
+            { 13,  5, 12, 16 },
+            {  6,  0,  4, 11 },
+            {  7,  2,  3, 10 },
+            { 14,  8,  9, 15 }
+        };
+
+        public ClusteredDotDitherer(Size imageSize, int taskCount) :
+            base(imageSize, taskCount)
+        {
+        }
+    }
+}

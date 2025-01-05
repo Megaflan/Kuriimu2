@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-namespace Kanvas
+﻿namespace Kanvas
 {
-    static class ParallelProcessing
+    internal static class ParallelProcessing
     {
         public static void ProcessParallel<TTask>(IEnumerable<TTask> tasks, int taskCount,
             Action<TTask> taskDelegate) where TTask : class
