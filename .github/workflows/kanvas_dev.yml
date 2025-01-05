@@ -1,15 +1,15 @@
-name: Kuriimu2 Komponent
+name: Kuriimu2 Kanvas
 
 on:
   push:
     branches:
       - imgui
     paths:
-      - 'src/lib/Komponent/*.nuspec'
-      - 'src/lib/Komponent/*.csproj'
-      - 'src/lib/Komponent/*.cs'
-      - 'src/lib/Komponent.Contract/*.csproj'
-      - 'src/lib/Komponent.Contract/*.cs'
+      - 'src/lib/Kanvas/*.nuspec'
+      - 'src/lib/Kanvas/*.csproj'
+      - 'src/lib/Kanvas/*.cs'
+      - 'src/lib/Kanvas.Contract/*.csproj'
+      - 'src/lib/Kanvas.Contract/*.cs'
 
 jobs:
   build:
@@ -31,7 +31,7 @@ jobs:
         dotnet-version: 8.0
 
     - name: Build Nuget
-      run: dotnet build ./src/lib/Komponent/Komponent.csproj --configuration Release
+      run: dotnet build ./src/lib/Kanvas/Kanvas.csproj --configuration Release
 
     - name: Publish Nuget
       run: |
