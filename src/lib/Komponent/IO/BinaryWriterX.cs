@@ -1,11 +1,6 @@
-﻿using System;
-using System.IO;
-using System.Linq;
+﻿using System.Buffers.Binary;
 using System.Text;
-using System.Collections.Generic;
-using Komponent.Extensions;
-using Komponent.IO.BinarySupport;
-using Kontract.Models.IO;
+using Komponent.Contract.Enums;
 
 namespace Komponent.IO
 {
@@ -15,25 +10,21 @@ namespace Komponent.IO
         private int _bitPosition;
         private long _buffer;
 
+        private readonly Encoding _encoding;
+
+        /// <summary>
+        /// Gets or sets the order in which to read bytes.
+        /// </summary>
         public ByteOrder ByteOrder { get; set; }
+
+        /// <summary>
+        /// Gets or sets the order in which to read bits.
+        /// </summary>
         public BitOrder BitOrder { get; set; }
 
-        private Encoding _encoding = Encoding.UTF8;
-
-        public BitOrder EffectiveBitOrder
-        {
-            get
-            {
-                if (ByteOrder == ByteOrder.LittleEndian && BitOrder == BitOrder.LowestAddressFirst || ByteOrder == ByteOrder.BigEndian && BitOrder == BitOrder.HighestAddressFirst)
-                    return BitOrder.LeastSignificantBitFirst;
-
-                if (ByteOrder == ByteOrder.LittleEndian && BitOrder == BitOrder.HighestAddressFirst || ByteOrder == ByteOrder.BigEndian && BitOrder == BitOrder.LowestAddressFirst)
-                    return BitOrder.MostSignificantBitFirst;
-
-                return BitOrder;
-            }
-        }
-
+        /// <summary>
+        /// Gets or sets the size of a bit block in bytes.
+        /// </summary>
         public int BlockSize
         {
             get => _blockSize;
@@ -48,52 +39,27 @@ namespace Komponent.IO
 
         #region Constructors
 
-        public BinaryWriterX(Stream input,
-            ByteOrder byteOrder = ByteOrder.LittleEndian,
-            BitOrder bitOrder = BitOrder.MostSignificantBitFirst,
-            int blockSize = 4) : base(input, Encoding.UTF8)
+        public BinaryWriterX(Stream input, ByteOrder byteOrder = ByteOrder.LittleEndian,
+            BitOrder bitOrder = BitOrder.MostSignificantBitFirst, int blockSize = 4)
+            : this(input, Encoding.UTF8, true, byteOrder, bitOrder, blockSize)
         {
-            ByteOrder = byteOrder;
-            BitOrder = bitOrder;
-            BlockSize = blockSize;
-
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        public BinaryWriterX(Stream input,
-            bool leaveOpen,
-            ByteOrder byteOrder = ByteOrder.LittleEndian,
-            BitOrder bitOrder = BitOrder.MostSignificantBitFirst,
-            int blockSize = 4) : base(input, Encoding.UTF8, leaveOpen)
+        public BinaryWriterX(Stream input, bool leaveOpen, ByteOrder byteOrder = ByteOrder.LittleEndian,
+            BitOrder bitOrder = BitOrder.MostSignificantBitFirst, int blockSize = 4)
+            : this(input, Encoding.UTF8, leaveOpen, byteOrder, bitOrder, blockSize)
         {
-            ByteOrder = byteOrder;
-            BitOrder = bitOrder;
-            BlockSize = blockSize;
-
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        public BinaryWriterX(Stream input,
-            Encoding encoding,
-            ByteOrder byteOrder = ByteOrder.LittleEndian,
-            BitOrder bitOrder = BitOrder.MostSignificantBitFirst,
-            int blockSize = 4) : base(input, encoding)
+        public BinaryWriterX(Stream input, Encoding encoding, ByteOrder byteOrder = ByteOrder.LittleEndian,
+            BitOrder bitOrder = BitOrder.MostSignificantBitFirst, int blockSize = 4)
+            : this(input, encoding, true, byteOrder, bitOrder, blockSize)
         {
-            ByteOrder = byteOrder;
-            BitOrder = bitOrder;
-            BlockSize = blockSize;
-
-            _encoding = encoding;
-
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        public BinaryWriterX(Stream input,
-            Encoding encoding,
-            bool leaveOpen,
-            ByteOrder byteOrder = ByteOrder.LittleEndian,
-            BitOrder bitOrder = BitOrder.MostSignificantBitFirst,
-            int blockSize = 4) : base(input, encoding, leaveOpen)
+        public BinaryWriterX(Stream input, Encoding encoding, bool leaveOpen, ByteOrder byteOrder = ByteOrder.LittleEndian,
+            BitOrder bitOrder = BitOrder.MostSignificantBitFirst, int blockSize = 4)
+            : base(input, encoding, leaveOpen)
         {
             ByteOrder = byteOrder;
             BitOrder = bitOrder;
@@ -106,13 +72,55 @@ namespace Komponent.IO
 
         #endregion
 
-        #region Default Writes
-
         public override void Flush()
         {
-            FlushBuffer();
+            FlushBitBuffer();
 
             base.Flush();
+        }
+
+        #region Value Writes
+
+        public override void Write(byte[] buffer)
+        {
+            Flush();
+
+            base.Write(buffer);
+        }
+
+        public override void Write(byte[] buffer, int index, int count)
+        {
+            Flush();
+
+            base.Write(buffer, index, count);
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            Flush();
+
+            base.Write(buffer);
+        }
+
+        public override void Write(char[] chars, int index, int count)
+        {
+            Flush();
+
+            base.Write(chars, index, count);
+        }
+
+        public override void Write(ReadOnlySpan<char> chars)
+        {
+            Flush();
+
+            base.Write(chars);
+        }
+
+        public override void Write(bool value)
+        {
+            Flush();
+
+            base.Write(value);
         }
 
         public override void Write(byte value)
@@ -123,73 +131,6 @@ namespace Komponent.IO
         }
 
         public override void Write(sbyte value)
-        {
-            Flush();
-
-            base.Write(value);
-        }
-
-        public override void Write(short value)
-        {
-            Flush();
-
-            if (ByteOrder == ByteOrder.LittleEndian)
-                base.Write(value);
-            else
-                base.Write(BitConverter.GetBytes(value).Reverse().ToArray());
-        }
-
-        public override void Write(int value)
-        {
-            Flush();
-
-            if (ByteOrder == ByteOrder.LittleEndian)
-                base.Write(value);
-            else
-                base.Write(BitConverter.GetBytes(value).Reverse().ToArray());
-        }
-
-        public override void Write(long value)
-        {
-            Flush();
-
-            if (ByteOrder == ByteOrder.LittleEndian)
-                base.Write(value);
-            else
-                base.Write(BitConverter.GetBytes(value).Reverse().ToArray());
-        }
-
-        public override void Write(ushort value)
-        {
-            Flush();
-
-            if (ByteOrder == ByteOrder.LittleEndian)
-                base.Write(value);
-            else
-                base.Write(BitConverter.GetBytes(value).Reverse().ToArray());
-        }
-
-        public override void Write(uint value)
-        {
-            Flush();
-
-            if (ByteOrder == ByteOrder.LittleEndian)
-                base.Write(value);
-            else
-                base.Write(BitConverter.GetBytes(value).Reverse().ToArray());
-        }
-
-        public override void Write(ulong value)
-        {
-            Flush();
-
-            if (ByteOrder == ByteOrder.LittleEndian)
-                base.Write(value);
-            else
-                base.Write(BitConverter.GetBytes(value).Reverse().ToArray());
-        }
-
-        public override void Write(bool value)
         {
             Flush();
 
@@ -210,69 +151,243 @@ namespace Komponent.IO
             base.Write(chars);
         }
 
+        public override void Write(short value)
+        {
+            Flush();
+
+            var buffer = new byte[2];
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    BinaryPrimitives.WriteInt16LittleEndian(buffer, value);
+                    break;
+
+                case ByteOrder.BigEndian:
+                    BinaryPrimitives.WriteInt16BigEndian(buffer, value);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+
+            Write(buffer);
+        }
+
+        public override void Write(int value)
+        {
+            Flush();
+
+            var buffer = new byte[4];
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    BinaryPrimitives.WriteInt32LittleEndian(buffer, value);
+                    break;
+
+                case ByteOrder.BigEndian:
+                    BinaryPrimitives.WriteInt32BigEndian(buffer, value);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+
+            Write(buffer);
+        }
+
+        public override void Write(Half value)
+        {
+            Flush();
+
+            base.Write(value);
+        }
+
+        public override void Write(long value)
+        {
+            Flush();
+
+            var buffer = new byte[8];
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    BinaryPrimitives.WriteInt64LittleEndian(buffer, value);
+                    break;
+
+                case ByteOrder.BigEndian:
+                    BinaryPrimitives.WriteInt64BigEndian(buffer, value);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+
+            Write(buffer);
+        }
+
+        public override void Write(ushort value)
+        {
+            Flush();
+
+            var buffer = new byte[2];
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    BinaryPrimitives.WriteUInt16LittleEndian(buffer, value);
+                    break;
+
+                case ByteOrder.BigEndian:
+                    BinaryPrimitives.WriteUInt16BigEndian(buffer, value);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+
+            Write(buffer);
+        }
+
+        public override void Write(uint value)
+        {
+            Flush();
+
+            var buffer = new byte[4];
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    BinaryPrimitives.WriteUInt32LittleEndian(buffer, value);
+                    break;
+
+                case ByteOrder.BigEndian:
+                    BinaryPrimitives.WriteUInt32BigEndian(buffer, value);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+
+            Write(buffer);
+        }
+
+        public override void Write(ulong value)
+        {
+            Flush();
+
+            var buffer = new byte[8];
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    BinaryPrimitives.WriteUInt64LittleEndian(buffer, value);
+                    break;
+
+                case ByteOrder.BigEndian:
+                    BinaryPrimitives.WriteUInt64BigEndian(buffer, value);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+
+            Write(buffer);
+        }
+
         public override void Write(float value)
         {
             Flush();
 
-            if (ByteOrder == ByteOrder.LittleEndian)
-                base.Write(value);
-            else
-                base.Write(BitConverter.GetBytes(value).Reverse().ToArray());
+            var buffer = new byte[4];
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    BinaryPrimitives.WriteSingleLittleEndian(buffer, value);
+                    break;
+
+                case ByteOrder.BigEndian:
+                    BinaryPrimitives.WriteSingleBigEndian(buffer, value);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+
+            Write(buffer);
         }
 
         public override void Write(double value)
         {
             Flush();
 
-            if (ByteOrder == ByteOrder.LittleEndian)
-                base.Write(value);
-            else
-                base.Write(BitConverter.GetBytes(value).Reverse().ToArray());
+            var buffer = new byte[8];
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    BinaryPrimitives.WriteDoubleLittleEndian(buffer, value);
+                    break;
+
+                case ByteOrder.BigEndian:
+                    BinaryPrimitives.WriteDoubleBigEndian(buffer, value);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+
+            Write(buffer);
         }
 
         public override void Write(decimal value)
         {
             Flush();
 
-            if (ByteOrder == ByteOrder.LittleEndian)
-                base.Write(value);
-            else
-                base.Write(value.GetBytes().Reverse().ToArray());
-        }
+            var buffer = new byte[16];
+            int[] bits = decimal.GetBits(value);
 
-        public override void Write(byte[] buffer)
-        {
-            Flush();
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    BinaryPrimitives.WriteInt32LittleEndian(buffer, bits[0]);
+                    BinaryPrimitives.WriteInt32LittleEndian(buffer[4..], bits[1]);
+                    BinaryPrimitives.WriteInt32LittleEndian(buffer[8..], bits[2]);
+                    BinaryPrimitives.WriteInt32LittleEndian(buffer[12..], bits[3]);
+                    break;
 
-            base.Write(buffer);
-        }
+                case ByteOrder.BigEndian:
+                    BinaryPrimitives.WriteInt32BigEndian(buffer, bits[3]);
+                    BinaryPrimitives.WriteInt32BigEndian(buffer[4..], bits[2]);
+                    BinaryPrimitives.WriteInt32BigEndian(buffer[8..], bits[1]);
+                    BinaryPrimitives.WriteInt32BigEndian(buffer[12..], bits[0]);
+                    break;
 
-        public override void Write(byte[] buffer, int index, int count)
-        {
-            Flush();
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
 
-            base.Write(buffer, index, count);
-        }
-
-        public override void Write(char[] chars, int index, int count)
-        {
-            Flush();
-
-            base.Write(chars, index, count);
+            Write(buffer);
         }
 
         #endregion
 
         #region String Writes
 
-        public void WriteString(string value, Encoding encoding, bool leadingCount = true, bool nullTerminator = true)
+        public override void Write(string value)
         {
-            if (nullTerminator)
+            Flush();
+
+            base.Write(value);
+        }
+
+        public void WriteString(string value, bool writeLeadingCount = false, bool writeNullTerminator = true)
+        {
+            WriteString(value, _encoding, writeLeadingCount, writeNullTerminator);
+        }
+
+        public void WriteString(string value, Encoding encoding, bool writeLeadingCount = false, bool writeNullTerminator = true)
+        {
+            if (writeNullTerminator)
                 value += "\0";
 
-            var bytes = encoding.GetBytes(value);
+            byte[] bytes = encoding.GetBytes(value);
 
-            if (leadingCount)
+            if (writeLeadingCount)
                 Write((byte)bytes.Length);
 
             Write(bytes);
@@ -280,29 +395,100 @@ namespace Komponent.IO
 
         #endregion
 
-        #region Alignement & Padding Writes
+        #region Alignement/Padding Writes
 
-        public void WritePadding(int count, byte paddingByte = 0x0)
+        public void WritePadding(int count, byte paddingByte = 0)
         {
             for (var i = 0; i < count; i++)
                 Write(paddingByte);
         }
 
-        public void WriteAlignment(int alignment = 16, byte alignmentByte = 0x0)
+        public void WriteAlignment(int alignment, byte alignmentByte = 0)
         {
-            var remainder = BaseStream.Position % alignment;
-            if (remainder <= 0) return;
+            long remainder = BaseStream.Position % alignment;
+            if (remainder <= 0)
+                return;
+
             for (var i = 0; i < alignment - remainder; i++)
                 Write(alignmentByte);
         }
 
-        public void WriteAlignment(byte alignmentByte) => WriteAlignment(16, alignmentByte);
-
         #endregion
 
-        #region Helpers
+        #region Bit Writes
 
-        private void FlushBuffer()
+        public void WriteBit(long value)
+        {
+            switch (BitOrder)
+            {
+                case BitOrder.LeastSignificantBitFirst:
+                    _buffer |= (value & 1L) << _bitPosition++;
+                    break;
+
+                case BitOrder.MostSignificantBitFirst:
+                    _buffer |= (value & 1L) << (BlockSize * 8 - _bitPosition++ - 1);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported bit order {BitOrder}.");
+            }
+
+            if (_bitPosition >= BlockSize * 8)
+                Flush();
+        }
+
+        private void WriteBit(long value, bool writeBuffer)
+        {
+            switch (BitOrder)
+            {
+                case BitOrder.LeastSignificantBitFirst:
+                    _buffer |= (value & 1L) << _bitPosition++;
+                    break;
+
+                case BitOrder.MostSignificantBitFirst:
+                    _buffer |= (value & 1L) << (BlockSize * 8 - _bitPosition++ - 1);
+                    break;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported bit order {BitOrder}.");
+            }
+
+            if (writeBuffer)
+                Flush();
+        }
+
+        public void WriteBits(long value, int bitCount)
+        {
+            if (bitCount > 0)
+            {
+                switch (BitOrder)
+                {
+                    case BitOrder.LeastSignificantBitFirst:
+                        for (var i = 0; i < bitCount; i++)
+                        {
+                            WriteBit(value, _bitPosition + 1 >= BlockSize * 8);
+                            value >>= 1;
+                        }
+                        break;
+
+                    case BitOrder.MostSignificantBitFirst:
+                        for (var i = bitCount - 1; i >= 0; i--)
+                        {
+                            WriteBit((value >> i), _bitPosition + 1 >= BlockSize * 8);
+                        }
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unsupported bit order {BitOrder}.");
+                }
+            }
+            else
+            {
+                throw new Exception("BitCount needs to be greater than 0.");
+            }
+        }
+
+        private void FlushBitBuffer()
         {
             if (_bitPosition <= 0)
                 return;
@@ -323,76 +509,8 @@ namespace Komponent.IO
                     Write(_buffer);
                     break;
             }
+
             _buffer = 0;
-        }
-
-        #endregion
-
-        #region Generic type writing
-
-        public void WriteMultiple<T>(IEnumerable<T> list)
-        {
-            foreach (var element in list)
-                WriteType(element);
-        }
-
-        public void WriteType(object value)
-        {
-            var typeWriter = new TypeWriter();
-            typeWriter.WriteType(this, value);
-        }
-
-        #endregion
-
-        #region Custom Methods
-
-        // Bit Fields
-        public void WriteBit(bool value)
-        {
-            if (EffectiveBitOrder == BitOrder.LeastSignificantBitFirst)
-                _buffer |= (value ? 1L : 0L) << _bitPosition++;
-            else
-                _buffer |= (value ? 1L : 0L) << (BlockSize * 8 - _bitPosition++ - 1);
-
-            if (_bitPosition >= BlockSize * 8)
-                Flush();
-        }
-
-        private void WriteBit(bool value, bool writeBuffer)
-        {
-            if (EffectiveBitOrder == BitOrder.LeastSignificantBitFirst)
-                _buffer |= (value ? 1L : 0L) << _bitPosition++;
-            else
-                _buffer |= (value ? 1L : 0L) << (BlockSize * 8 - _bitPosition++ - 1);
-
-            if (writeBuffer)
-                Flush();
-        }
-
-        public void WriteBits(long value, int bitCount)
-        {
-            if (bitCount > 0)
-            {
-                if (EffectiveBitOrder == BitOrder.LeastSignificantBitFirst)
-                {
-                    for (var i = 0; i < bitCount; i++)
-                    {
-                        WriteBit((value & 1) == 1, _bitPosition + 1 >= BlockSize * 8);
-                        value >>= 1;
-                    }
-                }
-                else
-                {
-                    for (var i = bitCount - 1; i >= 0; i--)
-                    {
-                        WriteBit(((value >> i) & 1) == 1, _bitPosition + 1 >= BlockSize * 8);
-                    }
-                }
-            }
-            else
-            {
-                throw new Exception("BitCount needs to be greater than 0");
-            }
         }
 
         #endregion

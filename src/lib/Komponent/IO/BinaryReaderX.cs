@@ -1,12 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+using System.Buffers.Binary;
 using System.Text;
-using Komponent.Exceptions;
-using Komponent.Extensions;
-using Komponent.IO.BinarySupport;
-using Kontract.Models.IO;
+using Komponent.Contract.Enums;
+using Komponent.Contract.Exceptions;
 
 namespace Komponent.IO
 {
@@ -17,25 +12,22 @@ namespace Komponent.IO
         private int _bitPosition = 64;
         private long _buffer;
 
+        private readonly int _encodingNullLength;
+        private readonly Encoding _encoding;
+
+        /// <summary>
+        /// Gets or sets the order in which to read bytes.
+        /// </summary>
         public ByteOrder ByteOrder { get; set; }
+
+        /// <summary>
+        /// Gets or sets the order in which to read bits.
+        /// </summary>
         public BitOrder BitOrder { get; set; }
 
-        private Encoding _encoding = Encoding.UTF8;
-
-        public BitOrder EffectiveBitOrder
-        {
-            get
-            {
-                if (ByteOrder == ByteOrder.LittleEndian && BitOrder == BitOrder.LowestAddressFirst || ByteOrder == ByteOrder.BigEndian && BitOrder == BitOrder.HighestAddressFirst)
-                    return BitOrder.LeastSignificantBitFirst;
-
-                if (ByteOrder == ByteOrder.LittleEndian && BitOrder == BitOrder.HighestAddressFirst || ByteOrder == ByteOrder.BigEndian && BitOrder == BitOrder.LowestAddressFirst)
-                    return BitOrder.MostSignificantBitFirst;
-
-                return BitOrder;
-            }
-        }
-
+        /// <summary>
+        /// Gets or sets the size of a bit block in bytes.
+        /// </summary>
         public int BlockSize
         {
             get => _currentBlockSize;
@@ -51,63 +43,83 @@ namespace Komponent.IO
 
         #region Constructors
 
-        public BinaryReaderX(Stream input,
-            ByteOrder byteOrder = ByteOrder.LittleEndian,
-            BitOrder bitOrder = BitOrder.MostSignificantBitFirst,
-            int blockSize = 4) : base(input, Encoding.UTF8)
+        public BinaryReaderX(Stream input, ByteOrder byteOrder = ByteOrder.LittleEndian,
+            BitOrder bitOrder = BitOrder.MostSignificantBitFirst, int blockSize = 4)
+            : this(input, Encoding.UTF8, true, byteOrder, bitOrder, blockSize)
         {
-            ByteOrder = byteOrder;
-            BitOrder = bitOrder;
-            BlockSize = blockSize;
-
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        public BinaryReaderX(Stream input,
-            bool leaveOpen,
-            ByteOrder byteOrder = ByteOrder.LittleEndian,
-            BitOrder bitOrder = BitOrder.MostSignificantBitFirst,
-            int blockSize = 4) : base(input, Encoding.UTF8, leaveOpen)
+        public BinaryReaderX(Stream input, bool leaveOpen, ByteOrder byteOrder = ByteOrder.LittleEndian,
+            BitOrder bitOrder = BitOrder.MostSignificantBitFirst, int blockSize = 4)
+            : this(input, Encoding.UTF8, leaveOpen, byteOrder, bitOrder, blockSize)
         {
-            ByteOrder = byteOrder;
-            BitOrder = bitOrder;
-            BlockSize = blockSize;
-
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
-        public BinaryReaderX(Stream input,
-            Encoding encoding,
-            ByteOrder byteOrder = ByteOrder.LittleEndian,
-            BitOrder bitOrder = BitOrder.MostSignificantBitFirst,
-            int blockSize = 4) : base(input, encoding)
+        public BinaryReaderX(Stream input, Encoding encoding, ByteOrder byteOrder = ByteOrder.LittleEndian,
+            BitOrder bitOrder = BitOrder.MostSignificantBitFirst, int blockSize = 4)
+            : this(input, encoding, true, byteOrder, bitOrder, blockSize)
+        {
+        }
+
+        public BinaryReaderX(Stream input, Encoding encoding, bool leaveOpen, ByteOrder byteOrder = ByteOrder.LittleEndian,
+            BitOrder bitOrder = BitOrder.MostSignificantBitFirst, int blockSize = 4)
+            : base(input, encoding, leaveOpen)
         {
             ByteOrder = byteOrder;
             BitOrder = bitOrder;
             BlockSize = blockSize;
+
             _encoding = encoding;
-
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-        }
-
-        public BinaryReaderX(Stream input,
-            Encoding encoding,
-            bool leaveOpen,
-            ByteOrder byteOrder = ByteOrder.LittleEndian,
-            BitOrder bitOrder = BitOrder.MostSignificantBitFirst,
-            int blockSize = 4) : base(input, encoding, leaveOpen)
-        {
-            ByteOrder = byteOrder;
-            BitOrder = bitOrder;
-            BlockSize = blockSize;
-            _encoding = encoding;
+            _encodingNullLength = _encoding.GetByteCount("\0");
 
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
         #endregion
 
-        #region Default Reads
+        #region Value Reads
+
+        public override int Read()
+        {
+            Reset();
+
+            return base.Read();
+        }
+
+        public override int Read(byte[] buffer, int index, int count)
+        {
+            Reset();
+
+            return base.Read(buffer, index, count);
+        }
+
+        public override int Read(Span<byte> buffer)
+        {
+            Reset();
+
+            return base.Read(buffer);
+        }
+
+        public override int Read(Span<char> buffer)
+        {
+            Reset();
+
+            return base.Read(buffer);
+        }
+
+        public override byte[] ReadBytes(int count)
+        {
+            Reset();
+
+            return base.ReadBytes(count);
+        }
+
+        public override bool ReadBoolean()
+        {
+            Reset();
+
+            return base.ReadBoolean();
+        }
 
         public override byte ReadByte()
         {
@@ -121,55 +133,6 @@ namespace Komponent.IO
             Reset();
 
             return base.ReadSByte();
-        }
-
-        public override short ReadInt16()
-        {
-            Reset();
-
-            return ByteOrder == ByteOrder.LittleEndian ? base.ReadInt16() : BitConverter.ToInt16(ReadBytes(2).Reverse().ToArray(), 0);
-        }
-
-        public override int ReadInt32()
-        {
-            Reset();
-
-            return ByteOrder == ByteOrder.LittleEndian ? base.ReadInt32() : BitConverter.ToInt32(ReadBytes(4).Reverse().ToArray(), 0);
-        }
-
-        public override long ReadInt64()
-        {
-            Reset();
-
-            return ByteOrder == ByteOrder.LittleEndian ? base.ReadInt64() : BitConverter.ToInt64(ReadBytes(8).Reverse().ToArray(), 0);
-        }
-
-        public override ushort ReadUInt16()
-        {
-            Reset();
-
-            return ByteOrder == ByteOrder.LittleEndian ? base.ReadUInt16() : BitConverter.ToUInt16(ReadBytes(2).Reverse().ToArray(), 0);
-        }
-
-        public override uint ReadUInt32()
-        {
-            Reset();
-
-            return ByteOrder == ByteOrder.LittleEndian ? base.ReadUInt32() : BitConverter.ToUInt32(ReadBytes(4).Reverse().ToArray(), 0);
-        }
-
-        public override ulong ReadUInt64()
-        {
-            Reset();
-
-            return ByteOrder == ByteOrder.LittleEndian ? base.ReadUInt64() : BitConverter.ToUInt64(ReadBytes(8).Reverse().ToArray(), 0);
-        }
-
-        public override bool ReadBoolean()
-        {
-            Reset();
-
-            return base.ReadBoolean();
         }
 
         public override char ReadChar()
@@ -186,34 +149,6 @@ namespace Komponent.IO
             return base.ReadChars(count);
         }
 
-        public override float ReadSingle()
-        {
-            Reset();
-
-            return ByteOrder == ByteOrder.LittleEndian ? base.ReadSingle() : BitConverter.ToSingle(ReadBytes(4).Reverse().ToArray(), 0);
-        }
-
-        public override double ReadDouble()
-        {
-            Reset();
-
-            return ByteOrder == ByteOrder.LittleEndian ? base.ReadDouble() : BitConverter.ToDouble(ReadBytes(8).Reverse().ToArray(), 0);
-        }
-
-        public override decimal ReadDecimal()
-        {
-            Reset();
-
-            return ByteOrder == ByteOrder.LittleEndian ? base.ReadDecimal() : ReadBytes(16).Reverse().ToArray().ToDecimal();
-        }
-
-        public override int Read(byte[] buffer, int index, int count)
-        {
-            Reset();
-
-            return base.Read(buffer, index, count);
-        }
-
         public override int Read(char[] buffer, int index, int count)
         {
             Reset();
@@ -221,33 +156,226 @@ namespace Komponent.IO
             return base.Read(buffer, index, count);
         }
 
-        public override byte[] ReadBytes(int count)
+        public override short ReadInt16()
         {
             Reset();
 
-            return base.ReadBytes(count);
+            byte[] buffer = ReadBytes(2);
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    return BinaryPrimitives.ReadInt16LittleEndian(buffer);
+
+                case ByteOrder.BigEndian:
+                    return BinaryPrimitives.ReadInt16BigEndian(buffer);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+        }
+
+        public override Half ReadHalf()
+        {
+            Reset();
+
+            return base.ReadHalf();
+        }
+
+        public override int ReadInt32()
+        {
+            Reset();
+
+            byte[] buffer = ReadBytes(4);
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    return BinaryPrimitives.ReadInt32LittleEndian(buffer);
+
+                case ByteOrder.BigEndian:
+                    return BinaryPrimitives.ReadInt32BigEndian(buffer);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+        }
+
+        public override long ReadInt64()
+        {
+            Reset();
+
+            byte[] buffer = ReadBytes(8);
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    return BinaryPrimitives.ReadInt64LittleEndian(buffer);
+
+                case ByteOrder.BigEndian:
+                    return BinaryPrimitives.ReadInt64BigEndian(buffer);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+        }
+
+        public override ushort ReadUInt16()
+        {
+            Reset();
+
+            byte[] buffer = ReadBytes(2);
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    return BinaryPrimitives.ReadUInt16LittleEndian(buffer);
+
+                case ByteOrder.BigEndian:
+                    return BinaryPrimitives.ReadUInt16BigEndian(buffer);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+        }
+
+        public override uint ReadUInt32()
+        {
+            Reset();
+
+            byte[] buffer = ReadBytes(4);
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    return BinaryPrimitives.ReadUInt32LittleEndian(buffer);
+
+                case ByteOrder.BigEndian:
+                    return BinaryPrimitives.ReadUInt32BigEndian(buffer);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+        }
+
+        public override ulong ReadUInt64()
+        {
+            Reset();
+
+            byte[] buffer = ReadBytes(8);
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    return BinaryPrimitives.ReadUInt64LittleEndian(buffer);
+
+                case ByteOrder.BigEndian:
+                    return BinaryPrimitives.ReadUInt64BigEndian(buffer);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+        }
+
+        public override float ReadSingle()
+        {
+            Reset();
+
+            byte[] buffer = ReadBytes(4);
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    return BinaryPrimitives.ReadSingleLittleEndian(buffer);
+
+                case ByteOrder.BigEndian:
+                    return BinaryPrimitives.ReadSingleBigEndian(buffer);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+        }
+
+        public override double ReadDouble()
+        {
+            Reset();
+
+            byte[] buffer = ReadBytes(8);
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    return BinaryPrimitives.ReadDoubleLittleEndian(buffer);
+
+                case ByteOrder.BigEndian:
+                    return BinaryPrimitives.ReadDoubleBigEndian(buffer);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
+        }
+
+        public override decimal ReadDecimal()
+        {
+            int lo, mid, hi, flags;
+
+            Reset();
+
+            byte[] buffer = ReadBytes(16);
+            switch (ByteOrder)
+            {
+                case ByteOrder.LittleEndian:
+                    lo = BinaryPrimitives.ReadInt32LittleEndian(buffer);
+                    mid = BinaryPrimitives.ReadInt32LittleEndian(buffer[4..]);
+                    hi = BinaryPrimitives.ReadInt32LittleEndian(buffer[8..]);
+                    flags = BinaryPrimitives.ReadInt32LittleEndian(buffer[12..]);
+                    return new decimal(new[] { lo, mid, hi, flags });
+
+                case ByteOrder.BigEndian:
+                    flags = BinaryPrimitives.ReadInt32BigEndian(buffer);
+                    hi = BinaryPrimitives.ReadInt32BigEndian(buffer[4..]);
+                    mid = BinaryPrimitives.ReadInt32BigEndian(buffer[8..]);
+                    lo = BinaryPrimitives.ReadInt32BigEndian(buffer[12..]);
+                    return new decimal(new[] { lo, mid, hi, flags });
+
+                default:
+                    throw new InvalidOperationException($"Unsupported byte order {ByteOrder}.");
+            }
         }
 
         #endregion
 
         #region String Reads
 
-        public string ReadCStringASCII() => string.Concat(Enumerable.Range(0, 999).Select(_ => (char)ReadByte()).TakeWhile(c => c != 0));
-        public string ReadCStringUTF16() => string.Concat(Enumerable.Range(0, 999).Select(_ => (char)ReadInt16()).TakeWhile(c => c != 0));
-        public string ReadCStringSJIS() => Encoding.GetEncoding("Shift-JIS").GetString(Enumerable.Range(0, 999).Select(_ => ReadByte()).TakeWhile(c => c != 0).ToArray());
-
-        public string ReadASCIIStringUntil(byte stop)
+        public override string ReadString()
         {
-            var result = string.Empty;
+            Reset();
 
-            var b = ReadByte();
-            while (b != stop && BaseStream.Position < BaseStream.Length)
+            return base.ReadString();
+        }
+
+        public string ReadNullTerminatedString()
+        {
+            Reset();
+
+            var result = new List<byte>(0x400);
+
+            var buffer = new byte[_encodingNullLength];
+            while (BaseStream.Position < BaseStream.Length)
             {
-                result += (char)b;
-                b = ReadByte();
+                var shouldStop = false;
+
+                int length = BaseStream.Read(buffer);
+                if (length >= _encodingNullLength)
+                {
+                    for (var i = 0; i < _encodingNullLength; i++)
+                    {
+                        if (buffer[i] != 0)
+                            continue;
+
+                        shouldStop = true;
+                    }
+                }
+
+                if (shouldStop)
+                    break;
+
+                result.AddRange(buffer);
             }
 
-            return result;
+            return _encoding.GetString(result.ToArray());
         }
 
         public string ReadString(int length)
@@ -262,37 +390,23 @@ namespace Komponent.IO
 
         #endregion
 
-        #region Peeks
+        #region Alignment Reads
 
-        // String
-        public string PeekString(int length = 4)
+        public byte SeekAlignment(int alignment = 16)
         {
-            return PeekString(0, length, _encoding);
+            var remainder = BaseStream.Position % alignment;
+            if (remainder <= 0) return 0;
+
+            var alignmentByte = ReadByte();
+            BaseStream.Position += alignment - remainder - 1;
+
+            return alignmentByte;
         }
 
-        public string PeekString(int length, Encoding encoding)
-        {
-            return PeekString(0, length, encoding);
-        }
+        #endregion
 
-        public string PeekString(long offset, int length = 4)
-        {
-            return PeekString(offset, length, _encoding);
-        }
+        #region Value Peeks
 
-        public string PeekString(long offset, int length, Encoding encoding)
-        {
-            var startOffset = BaseStream.Position;
-
-            BaseStream.Seek(offset, SeekOrigin.Current);
-            var bytes = ReadBytes(length);
-
-            BaseStream.Seek(startOffset, SeekOrigin.Begin);
-
-            return encoding.GetString(bytes);
-        }
-
-        // Byte
         public byte PeekByte(long offset)
         {
             var startOffset = BaseStream.Position;
@@ -317,160 +431,66 @@ namespace Komponent.IO
             return value;
         }
 
-        public ushort PeekUInt16()
+        #endregion
+
+        #region String Peeks
+
+        public string PeekString(int length)
+        {
+            return PeekString(0, length, _encoding);
+        }
+
+        public string PeekString(long offset, int length)
+        {
+            return PeekString(offset, length, _encoding);
+        }
+
+        public string PeekString(long offset, int length, Encoding encoding)
         {
             var startOffset = BaseStream.Position;
 
-            var value = ReadUInt16();
+            BaseStream.Seek(offset, SeekOrigin.Current);
+            var bytes = ReadBytes(length);
 
-            BaseStream.Position = startOffset;
+            BaseStream.Seek(startOffset, SeekOrigin.Begin);
 
-            return value;
+            return encoding.GetString(bytes);
         }
 
         #endregion
 
-        #region Alignment Reads
+        #region Bit Reads
 
-        public byte SeekAlignment(int alignment = 16)
-        {
-            var remainder = BaseStream.Position % alignment;
-            if (remainder <= 0) return 0;
-
-            var alignmentByte = ReadByte();
-            BaseStream.Position += alignment - remainder - 1;
-
-            return alignmentByte;
-        }
-
-        #endregion
-
-        #region Helpers
-
-        private void Reset()
-        {
-            ResetBitBuffer();
-        }
-
-        public void ResetBitBuffer()
-        {
-            _bitPosition = 64;
-            _buffer = 0;
-        }
-
-        private void FillBuffer()
-        {
-            _currentBlockSize = _blockSize;
-            switch (_blockSize)
-            {
-                case 1:
-                    _buffer = ReadByte();
-                    break;
-                case 2:
-                    _buffer = ReadInt16();
-                    break;
-                case 4:
-                    _buffer = ReadInt32();
-                    break;
-                case 8:
-                    _buffer = ReadInt64();
-                    break;
-            }
-            _bitPosition = 0;
-        }
-
-        #endregion
-
-        #region Read generic type
-
-        public T ReadType<T>() => (T)ReadType(typeof(T));
-
-        public object ReadType(Type type)
-        {
-            var typeReader = new TypeReader();
-            return typeReader.ReadType(this, type);
-        }
-
-        public IList<T> ReadMultiple<T>(int count) => ReadMultipleInternal(count, typeof(T)).Cast<T>().ToArray();
-
-        public IList<object> ReadMultiple(int count, Type type) => ReadMultipleInternal(count, type).ToArray();
-
-        private IEnumerable<object> ReadMultipleInternal(int count, Type type) =>
-            Enumerable.Range(0, count).Select(_ => ReadType(type));
-
-        #endregion
-
-        #region Custom Methods
-
-        public byte[] ScanBytes(int pos, int length = 1)
-        {
-            var startOffset = BaseStream.Position;
-
-            if (pos + length >= BaseStream.Length) length = (int)BaseStream.Length - pos;
-            if (pos < 0 || pos >= BaseStream.Length) pos = length = 0;
-
-            BaseStream.Position = pos;
-            var result = ReadBytes(length);
-            BaseStream.Position = startOffset;
-
-            return result;
-        }
-
-        public byte[] ReadAllBytes()
-        {
-            var startOffset = BaseStream.Position;
-
-            BaseStream.Position = 0;
-            var output = ReadBytes((int)BaseStream.Length);
-            BaseStream.Position = startOffset;
-
-            return output;
-        }
-
-        // TODO: Optimize by looking into the stream for the stop byte and doing only one copy action at the end
-        public byte[] ReadBytesUntil(byte stop)
-        {
-            var result = new List<byte>();
-
-            var b = ReadByte();
-            while (b != stop && BaseStream.Position < BaseStream.Length)
-            {
-                result.Add(b);
-                b = ReadByte();
-            }
-
-            return result.ToArray();
-        }
-
-        public byte[] ReadBytesUntil(params byte[] stop)
-        {
-            var result = new List<byte>();
-
-            byte b = ReadByte();
-            while (stop.All(s => s != b) && BaseStream.Position < BaseStream.Length)
-            {
-                result.Add(b);
-                b = ReadByte();
-            }
-
-            return result.ToArray();
-        }
-
-        // Bit Fields
-        public bool ReadBit()
-        {
-            return ReadBitInteger() == 1;
-        }
-
-        private int ReadBitInteger()
+        public int ReadBit()
         {
             if (_bitPosition >= _currentBlockSize * 8)
-                FillBuffer();
+                FillBitBuffer();
 
-            if (EffectiveBitOrder == BitOrder.LeastSignificantBitFirst)
-                return (int)((_buffer >> _bitPosition++) & 0x1);
+            switch (BitOrder)
+            {
+                case BitOrder.LeastSignificantBitFirst:
+                    return (int)((_buffer >> _bitPosition++) & 0x1);
 
-            return (int)((_buffer >> (_currentBlockSize * 8 - _bitPosition++ - 1)) & 0x1);
+                case BitOrder.MostSignificantBitFirst:
+                    return (int)((_buffer >> (_currentBlockSize * 8 - _bitPosition++ - 1)) & 0x1);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported bit order {BitOrder}.");
+            }
+        }
+
+        public T ReadBits<T>(int count)
+        {
+            if (typeof(T) != typeof(bool) &&
+                typeof(T) != typeof(sbyte) && typeof(T) != typeof(byte) &&
+                typeof(T) != typeof(short) && typeof(T) != typeof(ushort) &&
+                typeof(T) != typeof(int) && typeof(T) != typeof(uint) &&
+                typeof(T) != typeof(long) && typeof(T) != typeof(ulong))
+                throw new UnsupportedTypeException(typeof(T));
+
+            object value = ReadBits(count);
+
+            return (T)Convert.ChangeType(value, typeof(T));
         }
 
         public object ReadBits(int count)
@@ -501,34 +521,66 @@ namespace Komponent.IO
             long result = 0;
             for (var i = 0; i < count; i++)
             {
-                if (EffectiveBitOrder == BitOrder.MostSignificantBitFirst)
+                switch (BitOrder)
                 {
-                    result <<= 1;
-                    result |= (byte)ReadBitInteger();
-                }
-                else
-                {
-                    result |= (long)ReadBitInteger() << i;
+                    case BitOrder.LeastSignificantBitFirst:
+                        result |= (long)ReadBit() << i;
+                        break;
+
+                    case BitOrder.MostSignificantBitFirst:
+                        result <<= 1;
+                        result |= (byte)ReadBit();
+                        break;
+
+                    default:
+                        throw new InvalidOperationException($"Unsupported bit order {BitOrder}.");
                 }
             }
 
             return result;
         }
 
-        public T ReadBits<T>(int count)
+        private void Reset()
         {
-            if (typeof(T) != typeof(bool) &&
-                typeof(T) != typeof(sbyte) && typeof(T) != typeof(byte) &&
-                typeof(T) != typeof(short) && typeof(T) != typeof(ushort) &&
-                typeof(T) != typeof(int) && typeof(T) != typeof(uint) &&
-                typeof(T) != typeof(long) && typeof(T) != typeof(ulong))
-                throw new UnsupportedTypeException(typeof(T));
+            ResetBitBuffer();
+        }
 
-            var value = ReadBits(count);
+        internal void ResetBitBuffer()
+        {
+            _bitPosition = 64;
+            _buffer = 0;
+        }
 
-            return (T)Convert.ChangeType(value, typeof(T));
+        private void FillBitBuffer()
+        {
+            _currentBlockSize = _blockSize;
+
+            switch (_blockSize)
+            {
+                case 1:
+                    _buffer = ReadByte();
+                    break;
+                case 2:
+                    _buffer = ReadInt16();
+                    break;
+                case 4:
+                    _buffer = ReadInt32();
+                    break;
+                case 8:
+                    _buffer = ReadInt64();
+                    break;
+            }
+
+            _bitPosition = 0;
         }
 
         #endregion
+
+        protected override void FillBuffer(int numBytes)
+        {
+            Reset();
+
+            base.FillBuffer(numBytes);
+        }
     }
 }
