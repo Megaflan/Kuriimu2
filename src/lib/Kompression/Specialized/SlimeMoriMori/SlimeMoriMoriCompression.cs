@@ -1,25 +1,31 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-
+﻿using Komponent.Contract.Enums;
 using Komponent.IO;
-using Kompression.Configuration.InputManipulation;
+using Kompression.Contract;
+using Kompression.Contract.DataClasses.Encoder.Huffman;
+using Kompression.Contract.DataClasses.Encoder.LempelZiv;
+using Kompression.Contract.DataClasses.Encoder.LempelZiv.MatchFinder;
+using Kompression.Contract.DataClasses.Encoder.LempelZiv.MatchParser;
+using Kompression.Contract.Encoder.LempelZiv.MatchFinder;
+using Kompression.Contract.Enums.Encoder.Huffman;
+using Kompression.Contract.Enums.Encoder.LempelZiv;
+using Kompression.DataClasses.Configuration;
+using Kompression.Encoder.Huffman;
+using Kompression.Encoder.LempelZiv.InputManipulation;
+using Kompression.Encoder.LempelZiv.MatchFinder;
+using Kompression.Encoder.LempelZiv.MatchParser;
 using Kompression.Extensions;
-using Kompression.Huffman;
-using Kompression.PatternMatch.MatchFinders;
-using Kompression.PatternMatch.MatchParser;
-using Kompression.Specialized.SlimeMoriMori.Decoders;
-using Kompression.Specialized.SlimeMoriMori.Deobfuscators;
-using Kompression.Specialized.SlimeMoriMori.Encoders;
-using Kompression.Specialized.SlimeMoriMori.Obfuscators;
-using Kompression.Specialized.SlimeMoriMori.ValueReaders;
-using Kompression.Specialized.SlimeMoriMori.ValueWriters;
-using Kontract.Kompression.Interfaces;
-using Kontract.Kompression.Models;
-using Kontract.Kompression.Models.Huffman;
-using Kontract.Kompression.Models.PatternMatch;
-using Kontract.Models.IO;
+using Kompression.InternalContract.SlimeMoriMori.Decoder;
+using Kompression.InternalContract.SlimeMoriMori.Deobfuscator;
+using Kompression.InternalContract.SlimeMoriMori.Encoder;
+using Kompression.InternalContract.SlimeMoriMori.Obfuscator;
+using Kompression.InternalContract.SlimeMoriMori.ValueReader;
+using Kompression.InternalContract.SlimeMoriMori.ValueWriter;
+using Kompression.Specialized.SlimeMoriMori.Decoder;
+using Kompression.Specialized.SlimeMoriMori.Deobfuscator;
+using Kompression.Specialized.SlimeMoriMori.Encoder;
+using Kompression.Specialized.SlimeMoriMori.Obfuscator;
+using Kompression.Specialized.SlimeMoriMori.ValueReader;
+using Kompression.Specialized.SlimeMoriMori.ValueWriter;
 
 namespace Kompression.Specialized.SlimeMoriMori
 {
@@ -95,71 +101,110 @@ namespace Kompression.Specialized.SlimeMoriMori
             var tree = CreateHuffmanTree(huffmanInput, _huffmanMode);
             var valueWriter = CreateValueWriter(_huffmanMode, tree);
 
-            using (var bw = new BitWriter(output, BitOrder.MostSignificantBitFirst, 4, ByteOrder.LittleEndian))
-            {
-                // Write header data
-                bw.WriteBits((int)input.Length, 0x18);
-                bw.WriteByte(0x70);
+            using var bw = new BinaryBitWriter(output, BitOrder.MostSignificantBitFirst, 4, ByteOrder.LittleEndian);
 
-                var identByte = _compressionMode & 0x7;
-                identByte |= (_huffmanMode & 0x3) << 3;
-                identByte |= (_obfuscationMode & 0x7) << 5;
-                bw.WriteByte(identByte);
+            // Write header data
+            bw.WriteBits((int)input.Length, 0x18);
+            bw.WriteByte(0x70);
 
-                // Write huffman tree
-                WriteHuffmanTree(bw, tree, _huffmanMode);
+            var identByte = _compressionMode & 0x7;
+            identByte |= (_huffmanMode & 0x3) << 3;
+            identByte |= (_obfuscationMode & 0x7) << 5;
+            bw.WriteByte(identByte);
 
-                // Encode the input data
-                var encoder = CreateEncoder(_compressionMode, valueWriter);
-                encoder.Encode(input, bw, matches);
+            // Write huffman tree
+            WriteHuffmanTree(bw, tree, _huffmanMode);
 
-                // Flush the buffer
-                bw.Flush();
-            }
+            // Encode the input data
+            var encoder = CreateEncoder(_compressionMode, valueWriter);
+            encoder.Encode(input, bw, matches);
+
+            // Flush the buffer
+            bw.Flush();
         }
 
-        private Match[] FindMatches(Stream input, int compressionMode, int huffmanMode)
+        private LempelZivMatch[] FindMatches(Stream input, int compressionMode, int huffmanMode)
         {
-            IMatchFinder[] matchFinders;
+            ILempelZivMatchFinder[] matchFinders;
             switch (compressionMode)
             {
                 case 1:
                     matchFinders = new[]
                     {
-                        new HistoryMatchFinder(
-                            new FindLimitations(3, 18, 1, 0xFFFF),
-                            new FindOptions(new InputManipulator(), 0, UnitSize.Byte, 8)),
+                        new HistoryMatchFinder(new LempelZivMatchFinderOptions
+                        {
+                            Limitations = new LempelZivMatchLimitations
+                            {
+                                MinLength = 3,
+                                MaxLength = 18,
+                                MinDisplacement = 1,
+                                MaxDisplacement = 0xFFFF
+                            },
+                            UnitSize = UnitSize.Byte
+                        })
                     };
                     break;
 
                 case 2:
                     matchFinders = new[]
                     {
-                        new HistoryMatchFinder(
-                            new FindLimitations(3, -1, 1, 0xFFFF),
-                            new FindOptions(new InputManipulator(), 0, UnitSize.Byte, 8))
+                        new HistoryMatchFinder(new LempelZivMatchFinderOptions
+                        {
+                            Limitations = new LempelZivMatchLimitations
+                            {
+                                MinLength = 3,
+                                MaxLength = -1,
+                                MinDisplacement = 1,
+                                MaxDisplacement = 0xFFFF
+                            },
+                            UnitSize = UnitSize.Byte
+                        })
                     };
                     break;
 
                 case 3:
                     matchFinders = new[]
                     {
-                        new HistoryMatchFinder(
-                            new FindLimitations(4, -1, 2, 0xFFFF),
-                            new FindOptions(new InputManipulator(), 0, UnitSize.Short, 8))
+                        new HistoryMatchFinder(new LempelZivMatchFinderOptions
+                        {
+                            Limitations = new LempelZivMatchLimitations
+                            {
+                                MinLength = 4,
+                                MaxLength = -1,
+                                MinDisplacement = 2,
+                                MaxDisplacement = 0xFFFF
+                            },
+                            UnitSize = UnitSize.Byte
+                        })
                     };
                     break;
 
                 case 4:
-                    return Array.Empty<Match>();
+                    return Array.Empty<LempelZivMatch>();
 
                 case 5:
-                    matchFinders = new IMatchFinder[]
+                    matchFinders = new ILempelZivMatchFinder[]
                     {
-                        new HistoryMatchFinder(new FindLimitations(3, 0x42, 1, 0xFFFF),
-                            new FindOptions(new InputManipulator(), 0, UnitSize.Byte, 8)),
-                        new RleMatchFinder(new FindLimitations(1, 0x40),
-                            new FindOptions(new InputManipulator(), 0, UnitSize.Byte, 8))
+                        new HistoryMatchFinder(new LempelZivMatchFinderOptions
+                        {
+                            Limitations = new LempelZivMatchLimitations
+                            {
+                                MinLength = 3,
+                                MaxLength = 0x42,
+                                MinDisplacement = 1,
+                                MaxDisplacement = 0xFFFF
+                            },
+                            UnitSize = UnitSize.Byte
+                        }),
+                        new RleMatchFinder(new LempelZivMatchFinderOptions
+                        {
+                            Limitations = new LempelZivMatchLimitations
+                            {
+                                MinLength = 1,
+                                MaxLength = 0x40
+                            },
+                            UnitSize = UnitSize.Byte
+                        })
                     };
                     break;
 
@@ -168,15 +213,19 @@ namespace Kompression.Specialized.SlimeMoriMori
             }
 
             // Optimal parse all LZ matches
-            var parser = new OptimalParser(
-                new FindOptions(new InputManipulator(), 0, compressionMode == 3 ? UnitSize.Short : UnitSize.Byte, 8),
-                new SlimePriceCalculator(compressionMode, huffmanMode),
-                matchFinders);
+            var parser = new OptimalLempelZivMatchParser(new LempelZivMatchParserOptions
+            {
+                InputManipulation = new InputManipulator(new LempelZivInputAdjustmentOptions()),
+                PriceCalculator = new SlimePriceCalculator(compressionMode, huffmanMode),
+                MatchFinders = matchFinders,
+                UnitSize = compressionMode == 3 ? UnitSize.Short : UnitSize.Byte,
+                TaskCount = 8
+            });
 
             return parser.ParseMatches(input).ToArray();
         }
 
-        private void WriteHuffmanTree(BitWriter bw, HuffmanTreeNode rootNode, int huffmanMode)
+        private void WriteHuffmanTree(BinaryBitWriter bw, HuffmanTreeNode rootNode, int huffmanMode)
         {
             int bitDepth;
             switch (huffmanMode)
@@ -205,7 +254,7 @@ namespace Kompression.Specialized.SlimeMoriMori
             }
         }
 
-        private byte[] RemoveMatchesFromInput(byte[] input, Match[] matches)
+        private byte[] RemoveMatchesFromInput(byte[] input, LempelZivMatch[] matches)
         {
             var huffmanInput = new byte[input.Length - matches.Sum(x => x.Length)];
 

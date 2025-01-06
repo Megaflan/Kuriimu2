@@ -1,9 +1,8 @@
-﻿using System;
-using Kontract.Kompression.Interfaces;
+﻿using Kompression.Contract.Encoder.LempelZiv.PriceCalculator;
 
 namespace Kompression.Specialized.SlimeMoriMori
 {
-    class SlimePriceCalculator : IPriceCalculator
+    class SlimePriceCalculator : ILempelZivPriceCalculator
     {
         private readonly int _compressionMode;
         private readonly int _huffmanMode;
@@ -66,14 +65,12 @@ namespace Kompression.Specialized.SlimeMoriMori
                         // approximate displacement with 3 bits
                         return 1 + 3 + result + 1 + 3 + 3;
                     }
-                    else
-                    {
-                        // 1 flag bit
-                        // 3 displacement index bits
-                        // 4 match length bits
-                        // approximate displacement with 3 bits
-                        return 1 + 3 + 4 + 3;
-                    }
+
+                    // 1 flag bit
+                    // 3 displacement index bits
+                    // 4 match length bits
+                    // approximate displacement with 3 bits
+                    return 1 + 3 + 4 + 3;
 
                 case 3:
                     if (length > 18)
@@ -99,14 +96,12 @@ namespace Kompression.Specialized.SlimeMoriMori
                         // approximate displacement with 3 bits
                         return 1 + 2 + result + 1 + 2 + 3;
                     }
-                    else
-                    {
-                        // 1 flag bit
-                        // 2 displacement index bits
-                        // 3 match length bits
-                        // approximate displacement with 3 bits
-                        return 1 + 2 + 3 + 3;
-                    }
+
+                    // 1 flag bit
+                    // 2 displacement index bits
+                    // 3 match length bits
+                    // approximate displacement with 3 bits
+                    return 1 + 2 + 3 + 3;
 
                 case 5:
                     if (displacement == 0)
@@ -114,11 +109,11 @@ namespace Kompression.Specialized.SlimeMoriMori
                         // 6 bits match length
                         // 8 bit static value
                         return 2 + 6 + 8;
-                    else
-                        // 2 displacement index bits
-                        // approximate displacement with 3 bits
-                        // 6 bits match length
-                        return 2 + 3 + 6;
+
+                    // 2 displacement index bits
+                    // approximate displacement with 3 bits
+                    // 6 bits match length
+                    return 2 + 3 + 6;
 
                 default:
                     throw new InvalidOperationException("Compression mode not supported for price calculation.");

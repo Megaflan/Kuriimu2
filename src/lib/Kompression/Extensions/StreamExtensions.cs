@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace Kompression.Extensions
+﻿namespace Kompression.Extensions
 {
     /// <summary>
     /// Extensions for <see cref="Stream"/>s.

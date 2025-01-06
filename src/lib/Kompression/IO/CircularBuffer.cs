@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace Kompression.IO
+﻿namespace Kompression.IO
 {
     /// <summary>
     /// A buffer to read and write data in a circular manner.
