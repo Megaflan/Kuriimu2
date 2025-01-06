@@ -32,7 +32,7 @@ jobs:
 
     - name: Setup NuGet sources
       run: |
-        dotnet nuget add source https://nuget.pkg.github.com/FanTranslatorsInternational/index.json --name Kuriimu2
+        dotnet nuget add source https://nuget.pkg.github.com/FanTranslatorsInternational/index.json --name Kuriimu2 --username onepiecefreak3 --password ${{ secrets.NUGET_UPDATE }}
 
     - name: Build Nuget
       run: dotnet build ./src/lib/Kompression/Kompression.csproj --configuration Release
