@@ -1,15 +1,15 @@
-name: Kuriimu2 Kanvas
+name: Kuriimu2 Kompression
 
 on:
   push:
     branches:
       - imgui
     paths:
-      - 'src/lib/Kanvas/*.nuspec'
-      - 'src/lib/Kanvas/*.csproj'
-      - 'src/lib/Kanvas/*.cs'
-      - 'src/lib/Kanvas.Contract/*.csproj'
-      - 'src/lib/Kanvas.Contract/*.cs'
+      - 'src/lib/Kompression/*.nuspec'
+      - 'src/lib/Kompression/*.csproj'
+      - 'src/lib/Kompression/*.cs'
+      - 'src/lib/Kompression.Contract/*.csproj'
+      - 'src/lib/Kompression.Contract/*.cs'
 
 jobs:
   build:
@@ -35,7 +35,7 @@ jobs:
         dotnet nuget add source https://nuget.pkg.github.com/FanTranslatorsInternational/index.json --name Kuriimu2
 
     - name: Build Nuget
-      run: dotnet build ./src/lib/Kanvas/Kanvas.csproj --configuration Release
+      run: dotnet build ./src/lib/Kompression/Kompression.csproj --configuration Release
 
     - name: Publish Nuget
       run: |
