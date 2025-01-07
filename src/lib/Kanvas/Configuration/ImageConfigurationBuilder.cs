@@ -12,20 +12,20 @@ namespace Kanvas.Configuration
 
         private readonly EncodingConfigurationBuilder _encodingConfigurationBuilder;
         private readonly PaletteEncodingConfigurationBuilder _paletteEncodingConfigurationBuilder;
+        private readonly ColorShaderConfigurationBuilder _colorShaderConfigurationBuilder;
         private readonly SizePaddingConfigurationBuilder _sizePaddingConfigurationBuilder;
         private readonly PixelRemappingConfigurationBuilder _pixelRemappingConfigurationBuilder;
-        private readonly ColorShaderConfigurationBuilder _colorShaderConfigurationBuilder;
         private QuantizationConfigurationBuilder? _quantizationConfigurationBuilder;
 
         public IEncodingConfigurationBuilder Transcode => _encodingConfigurationBuilder;
 
         public IPaletteEncodingConfigurationBuilder TranscodePalette => _paletteEncodingConfigurationBuilder;
 
+        public IColorShaderConfigurationBuilder ColorShader => _colorShaderConfigurationBuilder;
+
         public ISizePaddingConfigurationBuilder PadSize => _sizePaddingConfigurationBuilder;
 
         public IRemapPixelsConfigurationBuilder RemapPixels => _pixelRemappingConfigurationBuilder;
-
-        public IColorShaderConfigurationBuilder ColorShader => _colorShaderConfigurationBuilder;
 
         public ImageConfigurationBuilder() : this(new ImageTranscoderOptions())
         {
