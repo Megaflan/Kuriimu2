@@ -1,4 +1,6 @@
-﻿namespace Kryptography.Encryption.Sony
+﻿using Komponent.Streams;
+
+namespace Kryptography.Encryption.Sony
 {
     // TODO: Remove when Sony krypto is reimplemented.
     public abstract class KryptoStream : Stream
@@ -36,6 +38,7 @@
         public KryptoStream(Stream input, long offset, long length)
         {
             _baseStream = new SubStream(input, offset, length);
+            _baseStream.Position = Math.Min(Math.Max(input.Position, offset) - offset, length);
             _length = length;
         }
 
@@ -46,7 +49,7 @@
 
         public KryptoStream(byte[] input, long offset, long length)
         {
-            _baseStream = new SubStream(input, offset, length);
+            _baseStream = new SubStream(new MemoryStream(input), offset, length);
             _length = length;
         }
 

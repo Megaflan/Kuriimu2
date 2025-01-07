@@ -15,13 +15,13 @@
 
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <license type="expression">GPL-3.0-only</license>
-  </metadata>
 
-  <dependencies>
-    <group targetFramework="net8.0">
-      <dependency id="Komponent" version="2.1.1" />
-    </group>
-  </dependencies>
+    <dependencies>
+      <group targetFramework="net8.0">
+        <dependency id="Komponent" version="2.1.1" />
+      </group>
+    </dependencies>
+  </metadata>
 
   <files>
     <file src="bin\Debug\net8.0\*.dll" target="lib\net8.0\"/>
