@@ -1,0 +1,44 @@
+name: Kuriimu2 Kryptography
+
+on:
+  push:
+    branches:
+      - imgui
+    paths:
+      - 'src/lib/Kryptography/*.nuspec'
+      - 'src/lib/Kryptography/*.csproj'
+      - 'src/lib/Kryptography/*.cs'
+      - 'src/lib/Kryptography.Contract/*.csproj'
+      - 'src/lib/Kryptography.Contract/*.cs'
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: nuget/setup-nuget@v2
+    
+    - name: Wait for other dev builds
+      uses: softprops/turnstyle@v2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0
+
+    - name: Setup NuGet sources
+      run: |
+        dotnet nuget add source https://nuget.pkg.github.com/FanTranslatorsInternational/index.json --name Kuriimu2 --username onepiecefreak3 --password ${{ secrets.NUGET_UPDATE }}
+
+    - name: Build Nuget
+      run: dotnet build ./src/lib/Kryptography/Kryptography.csproj --configuration Release
+
+    - name: Publish Nuget
+      run: |
+        foreach($file in (Get-ChildItem "nuget" -Recurse -Include *.nupkg)) {
+          dotnet nuget push $file --api-key ${{ secrets.NUGET_UPDATE }} --source https://nuget.pkg.github.com/FanTranslatorsInternational/index.json --skip-duplicate
+        }
