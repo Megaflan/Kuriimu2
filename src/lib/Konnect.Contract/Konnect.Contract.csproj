@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="DataClasses\Plugin\File\Archive\**" />
+    <EmbeddedResource Remove="DataClasses\Plugin\File\Archive\**" />
+    <None Remove="DataClasses\Plugin\File\Archive\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Kanvas" Version="2.1.2" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
+  </ItemGroup>
+
+</Project>

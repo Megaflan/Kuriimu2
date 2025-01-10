@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package >
+  <metadata>
+    <id>Konnect</id>
+    <version>2.1.0</version>
+    <description>A library containing interfaces and data models for plugins.</description>
+
+    <authors>onepiecefreak;IcySon55</authors>
+    <owners>onepiecefreak;IcySon55</owners>
+    <copyright>Copyright (c) 2024 Fan Translators International</copyright>
+
+    <projectUrl>https://github.com/FanTranslatorsInternational/Kuriimu2</projectUrl>
+    <icon>kuriimu2icon.png</icon>
+    <tags>Kuriimu2;API;Contract;Plugins</tags>
+
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <license type="expression">GPL-3.0-only</license>
+
+    <dependencies>
+      <group targetFramework="net8.0">
+        <dependency id="Kanvas" version="2.1.2" />
+        <dependency id="Kompression" version="2.1.0" />
+        <dependency id="Serilog" version="4.2.0" />
+        <dependency id="SixLabors.ImageSharp" version="3.1.6" />
+      </group>
+    </dependencies>
+  </metadata>
+
+  <files>
+    <file src="bin\Debug\net8.0\*.dll" target="lib\net8.0\"/>
+    <file src="..\..\..\kuriimu2icon.png" target="kuriimu2icon.png"/>
+  </files>
+</package>
