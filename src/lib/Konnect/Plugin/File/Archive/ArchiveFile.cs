@@ -42,6 +42,9 @@ namespace Konnect.Plugin.File.Archive
         /// <inheritdoc />
         public bool IsFileDataInvalid => _fileInfo.FileData is { CanRead: false, CanWrite: false };
 
+        /// <inheritdoc />
+        public bool ContentChanged => _fileInfo.ContentChanged;
+
         /// <summary>
         /// Creates a new instance of <see cref="ArchiveFile"/>.
         /// </summary>

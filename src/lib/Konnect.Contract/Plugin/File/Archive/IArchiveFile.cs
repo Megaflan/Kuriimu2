@@ -32,6 +32,11 @@ namespace Konnect.Contract.Plugin.File.Archive
         bool IsFileDataInvalid { get; }
 
         /// <summary>
+        /// Determines if the archive file was changed.
+        /// </summary>
+        bool ContentChanged { get; }
+
+        /// <summary>
         /// Gets the (decompressed) file data from this file info.
         /// </summary>
         /// <param name="temporaryStreamProvider">A provider for temporary streams.</param>
