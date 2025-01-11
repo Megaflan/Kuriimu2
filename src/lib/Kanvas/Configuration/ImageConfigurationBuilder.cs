@@ -21,7 +21,7 @@ namespace Kanvas.Configuration
 
         public IPaletteEncodingConfigurationBuilder TranscodePalette => _paletteEncodingConfigurationBuilder;
 
-        public IColorShaderConfigurationBuilder ColorShader => _colorShaderConfigurationBuilder;
+        public IColorShaderConfigurationBuilder ShadeColors => _colorShaderConfigurationBuilder;
 
         public ISizePaddingConfigurationBuilder PadSize => _sizePaddingConfigurationBuilder;
 

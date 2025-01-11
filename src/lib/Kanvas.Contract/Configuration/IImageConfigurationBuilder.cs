@@ -10,7 +10,7 @@ namespace Kanvas.Contract.Configuration
 
         IRemapPixelsConfigurationBuilder RemapPixels { get; }
 
-        IColorShaderConfigurationBuilder ColorShader { get; }
+        IColorShaderConfigurationBuilder ShadeColors { get; }
 
         IImageConfigurationBuilder IsAnchoredAt(ImageAnchor anchor);
 
