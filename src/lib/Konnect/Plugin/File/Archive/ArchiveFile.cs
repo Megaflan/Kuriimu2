@@ -1,5 +1,6 @@
 ﻿using Kompression.Contract;
 using Konnect.Contract.DataClasses.FileSystem;
+using Konnect.Contract.DataClasses.Plugin.File.Archive;
 using Konnect.Contract.Management.Streams;
 using Konnect.Contract.Plugin.File.Archive;
 using Konnect.Contract.Progress;
@@ -10,38 +11,28 @@ namespace Konnect.Plugin.File.Archive
     /// <summary>
     /// The base model to represent a loaded file in an archive state.
     /// </summary>
-    public class ArchiveFileInfo : IArchiveFileInfo
+    public class ArchiveFile : IArchiveFile
     {
-        private readonly ICompression? _compression;
-
-        private UPath _filePath;
+        private readonly ArchiveFileInfo _fileInfo;
 
         private Lazy<Stream> _decompressedStream;
         private Lazy<Stream> _compressedStream;
         private Func<long> _getFileSizeAction;
 
         /// <inheritdoc />
-        public bool UsesCompression => _compression != null;
+        public Guid[]? PluginIds => _fileInfo.PluginIds;
 
         /// <inheritdoc />
-        public bool ContentChanged { get; set; }
-
-        /// <inheritdoc />
-        public Guid[] PluginIds { get; set; }
-
-        /// <summary>
-        /// The data stream for this file info.
-        /// </summary>
-        protected Stream FileData { get; set; }
+        public bool UsesCompression => _fileInfo is CompressedArchiveFileInfo;
 
         /// <inheritdoc />
         public UPath FilePath
         {
-            get => _filePath;
+            get => _fileInfo.FilePath;
             set
             {
-                _filePath = value.ToAbsolute();
-                ContentChanged = true;
+                _fileInfo.FilePath = value.ToAbsolute();
+                _fileInfo.ContentChanged = true;
             }
         }
 
@@ -49,43 +40,30 @@ namespace Konnect.Plugin.File.Archive
         public virtual long FileSize => _getFileSizeAction();
 
         /// <inheritdoc />
-        public bool IsFileDataInvalid => FileData is { CanRead: false, CanWrite: false };
+        public bool IsFileDataInvalid => _fileInfo.FileData is { CanRead: false, CanWrite: false };
 
         /// <summary>
-        /// Creates a new instance of <see cref="ArchiveFileInfo"/>.
+        /// Creates a new instance of <see cref="ArchiveFile"/>.
         /// </summary>
-        /// <param name="fileData">The data stream for this file info.</param>
-        /// <param name="filePath">The path of the file into the archive.</param>
-        public ArchiveFileInfo(Stream fileData, string filePath)
+        /// <param name="fileInfo">The info for this file.</param>
+        public ArchiveFile(ArchiveFileInfo fileInfo)
         {
-            FileData = fileData;
-            FilePath = filePath;
+            _fileInfo = fileInfo;
 
-            ContentChanged = false;
-
-            _getFileSizeAction = GetFileDataLength;
-        }
-
-        /// <summary>
-        /// Creates a new instance of <see cref="ArchiveFileInfo"/>.
-        /// </summary>
-        /// <param name="fileData">The data stream for this file info.</param>
-        /// <param name="filePath">The path of the file into the archive.</param>
-        /// <param name="compression">The <see cref="ICompression"/> for the compression algorithm to apply to the file.</param>
-        /// <param name="decompressedSize">The decompressed size of the file.</param>
-        public ArchiveFileInfo(Stream fileData, string filePath, ICompression compression, long decompressedSize) :
-            this(fileData, filePath)
-        {
-            _compression = compression;
-
-            _getFileSizeAction = () => decompressedSize;
-            _decompressedStream = new Lazy<Stream>(() => DecompressStream(fileData, compression));
-            _compressedStream = new Lazy<Stream>(GetBaseStream);
+            if (fileInfo is CompressedArchiveFileInfo compressedInfo)
+            {
+                _getFileSizeAction = () => compressedInfo.DecompressedSize;
+                _decompressedStream = new Lazy<Stream>(() => DecompressStream(compressedInfo.FileData, compressedInfo.Compression));
+                _compressedStream = new Lazy<Stream>(GetBaseStream);
+            }
+            else
+            {
+                _getFileSizeAction = GetFileDataLength;
+            }
         }
 
         /// <inheritdoc />
-        public virtual Task<Stream> GetFileData(ITemporaryStreamManager temporaryStreamManager = null,
-            IProgressContext progress = null)
+        public virtual Task<Stream> GetFileData(ITemporaryStreamManager? temporaryStreamManager, IProgressContext? progress)
         {
             return UsesCompression ? Task.Run(GetDecompressedStream) : Task.FromResult(GetBaseStream());
         }
@@ -93,21 +71,21 @@ namespace Konnect.Plugin.File.Archive
         /// <inheritdoc />
         public virtual void SetFileData(Stream fileData)
         {
-            if (FileData == fileData)
+            if (_fileInfo.FileData == fileData)
                 return;
 
-            FileData.Close();
-            FileData = fileData;
+            _fileInfo.FileData.Close();
+            _fileInfo.FileData = fileData;
 
             _getFileSizeAction = GetFileDataLength;
 
-            ContentChanged = true;
+            _fileInfo.ContentChanged = true;
 
-            if (!UsesCompression)
+            if (_fileInfo is not CompressedArchiveFileInfo compressedInfo)
                 return;
 
             _decompressedStream = new Lazy<Stream>(GetBaseStream);
-            _compressedStream = new Lazy<Stream>(() => CompressStream(fileData, _compression));
+            _compressedStream = new Lazy<Stream>(() => CompressStream(fileData, compressedInfo.Compression));
         }
 
         /// <summary>
@@ -116,21 +94,9 @@ namespace Konnect.Plugin.File.Archive
         /// <param name="output">The output to write the file data to.</param>
         /// <param name="progress">The context to report progress to.</param>
         /// <returns>The size of the file written.</returns>
-        public long SaveFileData(Stream output, IProgressContext progress = null)
+        public long WriteFileData(Stream output, bool compress, IProgressContext? progress)
         {
-            return SaveFileData(output, true, progress);
-        }
-
-        /// <summary>
-        /// Save the file data to an output stream.
-        /// </summary>
-        /// <param name="output">The output to write the file data to.</param>
-        /// <param name="compress">If <see cref="UsesCompression"/> is true, determines if the file data may be compressed.</param>
-        /// <param name="progress">The context to report progress to.</param>
-        /// <returns>The size of the file written.</returns>
-        public virtual long SaveFileData(Stream output, bool compress, IProgressContext progress = null)
-        {
-            var dataToCopy = GetFinalStream(compress);
+            var dataToCopy = GetFinalStream();
 
             progress?.ReportProgress($"Writing file '{FilePath}'.", 0, 1);
 
@@ -139,7 +105,7 @@ namespace Konnect.Plugin.File.Archive
 
             progress?.ReportProgress($"Writing file '{FilePath}'.", 1, 1);
 
-            ContentChanged = false;
+            _fileInfo.ContentChanged = false;
 
             return dataToCopy.Length;
         }
@@ -147,7 +113,7 @@ namespace Konnect.Plugin.File.Archive
         /// <inheritdoc />
         public void Dispose()
         {
-            FileData?.Dispose();
+            _fileInfo.FileData?.Dispose();
             _decompressedStream = null;
         }
 
@@ -183,8 +149,8 @@ namespace Konnect.Plugin.File.Archive
         /// <returns>The base stream of this instance.</returns>
         protected Stream GetBaseStream()
         {
-            FileData.Position = 0;
-            return FileData;
+            _fileInfo.FileData.Position = 0;
+            return _fileInfo.FileData;
         }
 
         /// <summary>
@@ -263,7 +229,7 @@ namespace Konnect.Plugin.File.Archive
 
         private long GetFileDataLength()
         {
-            return FileData?.Length ?? 0;
+            return _fileInfo.FileData?.Length ?? 0;
         }
 
         #endregion

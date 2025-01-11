@@ -60,7 +60,7 @@ namespace Konnect.Management.Files
 
         #region Identify file
 
-        public Task<bool> CanIdentify(IFileState fileState, IArchiveFileInfo afi, Guid pluginId)
+        public Task<bool> CanIdentify(IFileState fileState, IArchiveFile afi, Guid pluginId)
         {
             return _parentFileManager.CanIdentify(fileState, afi, pluginId);
         }
@@ -125,13 +125,13 @@ namespace Konnect.Management.Files
         #region Load ArchiveFileInfo
 
         /// <inheritdoc />
-        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFileInfo afi)
+        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFile afi)
         {
             return _parentFileManager.LoadFile(fileState, afi);
         }
 
         /// <inheritdoc />
-        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFileInfo afi, Guid pluginId)
+        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFile afi, Guid pluginId)
         {
             return _parentFileManager.LoadFile(fileState, afi, new LoadFileContext
             {
@@ -141,7 +141,7 @@ namespace Konnect.Management.Files
         }
 
         /// <inheritdoc />
-        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFileInfo afi, LoadFileContext loadFileContext)
+        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFile afi, LoadFileContext loadFileContext)
         {
             return _parentFileManager.LoadFile(fileState, afi, loadFileContext);
         }

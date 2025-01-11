@@ -7,6 +7,7 @@ using Konnect.Contract.FileSystem;
 using Konnect.Contract.Management.Files;
 using Konnect.Contract.Management.Plugin;
 using Konnect.Contract.Management.Streams;
+using Konnect.Contract.Plugin;
 using Konnect.Contract.Plugin.File;
 
 namespace Konnect.Management.Files
@@ -41,7 +42,7 @@ namespace Konnect.Management.Files
                 return new LoadResult
                 {
                     Status = LoadStatus.Errored,
-                    Message = "No plugin could open the file."
+                    Reason = LoadErrorReason.NoPlugin
                 };
 
             // 3. Create state from identified plugin
@@ -76,7 +77,8 @@ namespace Konnect.Management.Files
             return new LoadResult
             {
                 Status = LoadStatus.Successful,
-                LoadedFileState = stateInfo
+                LoadedFileState = stateInfo,
+                Reason = LoadErrorReason.None
             };
         }
 
@@ -180,13 +182,15 @@ namespace Konnect.Management.Files
                 return new LoadResult
                 {
                     Status = LoadStatus.Errored,
-                    Exception = e
+                    Exception = e,
+                    Reason = LoadErrorReason.StateCreateError
                 };
             }
 
             return new LoadResult
             {
-                Status = LoadStatus.Successful
+                Status = LoadStatus.Successful,
+                Reason = LoadErrorReason.None
             };
         }
 
@@ -208,7 +212,7 @@ namespace Konnect.Management.Files
                 return new LoadResult
                 {
                     Status = LoadStatus.Successful,
-                    Message = "The state is not loadable."
+                    Reason = LoadErrorReason.StateNoLoad
                 };
 
             // 2. Try loading the state
@@ -222,13 +226,15 @@ namespace Konnect.Management.Files
                 return new LoadResult
                 {
                     Status = LoadStatus.Errored,
-                    Exception = e
+                    Exception = e,
+                    Reason = LoadErrorReason.StateLoadError
                 };
             }
 
             return new LoadResult
             {
-                Status = LoadStatus.Successful
+                Status = LoadStatus.Successful,
+                Reason = LoadErrorReason.None
             };
         }
     }

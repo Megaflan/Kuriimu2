@@ -9,7 +9,7 @@
         /// Removes a single file from the archive state.
         /// </summary>
         /// <param name="afi">The file to remove.</param>
-        void RemoveFile(IArchiveFileInfo afi);
+        void RemoveFile(IArchiveFile afi);
 
         /// <summary>
         /// Removes all files from the archive state.

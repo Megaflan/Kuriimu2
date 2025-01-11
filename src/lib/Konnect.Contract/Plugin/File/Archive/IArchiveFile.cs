@@ -4,23 +4,17 @@ using Konnect.Contract.Progress;
 
 namespace Konnect.Contract.Plugin.File.Archive
 {
-    public interface IArchiveFileInfo : IDisposable
+    public interface IArchiveFile : IDisposable
     {
+        /// <summary>
+        /// The predefined plugin ids to try to open the file with.
+        /// </summary>
+        public Guid[]? PluginIds { get; }
+
         /// <summary>
         /// Determines if the FileData is compressed, and has to be handled as such
         /// </summary>
         bool UsesCompression { get; }
-
-        /// <summary>
-        /// Determines if the content of this file info was modified.
-        /// </summary>
-        bool ContentChanged { get; set; }
-
-        /// <summary>
-        /// Retrieve a list of plugins, this file can be opened with.
-        /// Any other plugins won't be allowed to pass this file on.
-        /// </summary>
-        Guid[] PluginIds { get; set; }
 
         /// <summary>
         /// The path of the file info into the archive.
@@ -52,5 +46,14 @@ namespace Konnect.Contract.Plugin.File.Archive
         /// <param name="fileData">The new file data for this file info.</param>
         /// <remarks>This method should only set the file data, without compressing or encrypting the data yet.</remarks>
         void SetFileData(Stream fileData);
+
+        /// <summary>
+        /// Writes the file data to an output stream.
+        /// </summary>
+        /// <param name="output">The stream to write to.</param>
+        /// <param name="compress">If the file should be compressed, if a compression is set.</param>
+        /// <param name="progress">The context to report progress to.</param>
+        /// <returns>The size of the written data.</returns>
+        long WriteFileData(Stream output, bool compress = true, IProgressContext? progress = null);
     }
 }

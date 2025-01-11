@@ -49,39 +49,39 @@ namespace Konnect.FileSystem
         }
 
         /// <summary>
-        /// Create a <see cref="AfiFileSystem"/> based on the given <see cref="IFileState"/>.
+        /// Create a <see cref="ArchivePluginFileSystem"/> based on the given <see cref="IFileState"/>.
         /// </summary>
         /// <param name="fileState"><see cref="IFileSystem"/> to create the file system from.</param>
         /// <returns>The created <see cref="IFileState"/> for this state.</returns>
-        public static IFileSystem CreateAfiFileSystem(IFileState fileState)
+        public static IFileSystem CreateArchivePluginFileSystem(IFileState fileState)
         {
-            return CreateAfiFileSystem(fileState, UPath.Root);
+            return CreateArchivePluginFileSystem(fileState, UPath.Root);
         }
 
         /// <summary>
-        /// Create a <see cref="AfiFileSystem"/> based on the given <see cref="IFileState"/>.
+        /// Create a <see cref="ArchivePluginFileSystem"/> based on the given <see cref="IFileState"/>.
         /// </summary>
         /// <param name="fileState"><see cref="IFileState"/> to create the file system from.</param>
         /// <param name="path">The path of the virtual file system.</param>
         /// <returns>The created <see cref="IFileSystem"/> for this state.</returns>
-        public static IFileSystem CreateAfiFileSystem(IFileState fileState, UPath path)
+        public static IFileSystem CreateArchivePluginFileSystem(IFileState fileState, UPath path)
         {
             if (fileState.PluginState is not IArchiveFilePluginState)
                 throw new InvalidOperationException("This state is not an archive.");
 
-            return CreateAfiFileSystem(fileState, path, fileState.StreamManager);
+            return CreateArchivePluginFileSystem(fileState, path, fileState.StreamManager);
         }
 
         /// <summary>
-        /// Create a <see cref="AfiFileSystem"/> based on the given <see cref="IArchiveFilePluginState"/>.
+        /// Create a <see cref="ArchivePluginFileSystem"/> based on the given <see cref="IArchiveFilePluginState"/>.
         /// </summary>
         /// <param name="fileState"><see cref="IFileState"/> to create the file system from.</param>
         /// <param name="path">The path of the virtual file system.</param>
         /// <param name="streamManager">The stream manager for this file system.</param>
         /// <returns>The created <see cref="IFileSystem"/> for this state.</returns>
-        public static IFileSystem CreateAfiFileSystem(IFileState fileState, UPath path, IStreamManager streamManager)
+        public static IFileSystem CreateArchivePluginFileSystem(IFileState fileState, UPath path, IStreamManager streamManager)
         {
-            var fileSystem = (IFileSystem)new AfiFileSystem(fileState, streamManager);
+            var fileSystem = (IFileSystem)new ArchivePluginFileSystem(fileState, streamManager);
             if (path != UPath.Empty && path != UPath.Root)
                 fileSystem = new SubFileSystem(fileSystem, path);
 

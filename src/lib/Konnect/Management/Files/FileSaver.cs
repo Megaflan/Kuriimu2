@@ -38,7 +38,7 @@ namespace Konnect.Management.Files
                 return new SaveResult
                 {
                     IsSuccessful = true,
-                    Message = "The file had no changes and was not saved."
+                    Reason = SaveErrorReason.NoChanges
                 };
 
             // 2. Save child states
@@ -59,7 +59,8 @@ namespace Konnect.Management.Files
             if (!isStart)
                 return new SaveResult
                 {
-                    IsSuccessful = true
+                    IsSuccessful = true,
+                    Reason = SaveErrorReason.None
                 };
 
             // 4. Reload the current state and all its children
@@ -84,7 +85,8 @@ namespace Konnect.Management.Files
                 return new SaveResult
                 {
                     IsSuccessful = false,
-                    Exception = reloadResult.Exception
+                    Exception = reloadResult.Exception,
+                    Reason = SaveErrorReason.StateReloadError
                 };
 
             // 2. Set new file input, if state was loaded from a physical medium
@@ -102,7 +104,8 @@ namespace Konnect.Management.Files
 
             return new SaveResult
             {
-                IsSuccessful = true
+                IsSuccessful = true,
+                Reason = SaveErrorReason.None
             };
         }
 
@@ -130,7 +133,8 @@ namespace Konnect.Management.Files
 
             return new SaveResult
             {
-                IsSuccessful = true
+                IsSuccessful = true,
+                Reason = SaveErrorReason.None
             };
         }
 
@@ -157,13 +161,15 @@ namespace Konnect.Management.Files
                 return new SaveResult
                 {
                     IsSuccessful = false,
-                    Exception = ex
+                    Exception = ex,
+                    Reason = SaveErrorReason.StateSaveError
                 };
             }
 
             return new SaveResult
             {
-                IsSuccessful = true
+                IsSuccessful = true,
+                Reason = SaveErrorReason.None
             };
         }
 
@@ -204,7 +210,7 @@ namespace Konnect.Management.Files
                     return new SaveResult
                     {
                         IsSuccessful = false,
-                        Message = $"'{file}' did not exist in '{destinationFileSystem.ConvertPathToInternal(UPath.Root)}'."
+                        Reason = SaveErrorReason.DestinationNotExist
                     };
             }
 
@@ -223,14 +229,16 @@ namespace Konnect.Management.Files
                     return new SaveResult
                     {
                         IsSuccessful = false,
-                        Exception = ex
+                        Exception = ex,
+                        Reason = SaveErrorReason.FileReplaceError
                     };
                 }
             }
 
             return new SaveResult
             {
-                IsSuccessful = true
+                IsSuccessful = true,
+                Reason = SaveErrorReason.None
             };
         }
 
@@ -256,7 +264,8 @@ namespace Konnect.Management.Files
                     return new SaveResult
                     {
                         IsSuccessful = false,
-                        Exception = ioe
+                        Exception = ioe,
+                        Reason = SaveErrorReason.FileCopyError
                     };
                 }
 
@@ -265,7 +274,8 @@ namespace Konnect.Management.Files
 
             return new SaveResult
             {
-                IsSuccessful = true
+                IsSuccessful = true,
+                Reason = SaveErrorReason.None
             };
         }
 
@@ -285,7 +295,7 @@ namespace Konnect.Management.Files
                 return new LoadResult
                 {
                     Status = LoadStatus.Errored,
-                    Message = "The state is not loadable."
+                    Reason = LoadErrorReason.StateNoLoad
                 };
 
             // 2. Try loading the state
@@ -298,13 +308,15 @@ namespace Konnect.Management.Files
                 return new LoadResult
                 {
                     Status = LoadStatus.Errored,
-                    Exception = ex
+                    Exception = ex,
+                    Reason = LoadErrorReason.StateLoadError
                 };
             }
 
             return new LoadResult
             {
-                Status = LoadStatus.Successful
+                Status = LoadStatus.Successful,
+                Reason = LoadErrorReason.None
             };
         }
     }

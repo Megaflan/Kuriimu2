@@ -10,7 +10,7 @@ namespace Konnect.Contract.Plugin.File.Archive
         /// <summary>
         /// The read-only collection of files the current archive contains.
         /// </summary>
-        IReadOnlyList<IArchiveFileInfo> Files { get; }
+        IReadOnlyList<IArchiveFile> Files { get; }
 
         #region Optional feature support checks
 
@@ -23,11 +23,11 @@ namespace Konnect.Contract.Plugin.File.Archive
 
         #region Optional feature casting defaults
 
-        void AttemptReplaceFile(IArchiveFileInfo afi, Stream fileData) => ((IReplaceFiles)this).ReplaceFile(afi, fileData);
-        void AttemptRename(IArchiveFileInfo afi, UPath path) => ((IRenameFiles)this).Rename(afi, path);
-        void AttemptRemoveFile(IArchiveFileInfo afi) => ((IRemoveFiles)this).RemoveFile(afi);
+        void AttemptReplaceFile(IArchiveFile afi, Stream fileData) => ((IReplaceFiles)this).ReplaceFile(afi, fileData);
+        void AttemptRename(IArchiveFile afi, UPath path) => ((IRenameFiles)this).Rename(afi, path);
+        void AttemptRemoveFile(IArchiveFile afi) => ((IRemoveFiles)this).RemoveFile(afi);
         void AttemptRemoveAll() => ((IRemoveFiles)this).RemoveAll();
-        IArchiveFileInfo AttemptAddFile(Stream fileData, UPath filePath) => ((IAddFiles)this).AddFile(fileData, filePath);
+        IArchiveFile AttemptAddFile(Stream fileData, UPath filePath) => ((IAddFiles)this).AddFile(fileData, filePath);
 
         #endregion
     }

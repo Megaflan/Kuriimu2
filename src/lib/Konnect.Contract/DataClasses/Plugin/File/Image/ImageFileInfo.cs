@@ -7,7 +7,7 @@ namespace Konnect.Contract.DataClasses.Plugin.File.Image
     /// <summary>
     /// The base bitmap info class.
     /// </summary>
-    public class ImageInfo
+    public class ImageFileInfo
     {
         /// <summary>
         /// The name of this image.
@@ -42,7 +42,7 @@ namespace Konnect.Contract.DataClasses.Plugin.File.Image
         /// <summary>
         /// The mip map data for this image.
         /// </summary>
-        public IList<byte[]> MipMapData { get; } = new List<byte[]>();
+        public IList<byte[]>? MipMapData { get; set; }
 
         /// <summary>
         /// Defines where the image with its real size is anchored in the padded size.

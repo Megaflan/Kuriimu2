@@ -51,7 +51,7 @@ namespace Konnect.Contract.Management.Files
         /// <param name="afi">The AFI to identify from the file state.</param>
         /// <param name="pluginId">The plugin ID to identify with.</param>
         /// <returns>If the file could be identified by the denoted plugin.</returns>
-        Task<bool> CanIdentify(IFileState fileState, IArchiveFileInfo afi, Guid pluginId);
+        Task<bool> CanIdentify(IFileState fileState, IArchiveFile afi, Guid pluginId);
 
         /// <summary>
         /// Identifies a stream against a given plugin.
@@ -112,7 +112,7 @@ namespace Konnect.Contract.Management.Files
         /// <param name="fileState">The loaded path state to load a path from.</param>
         /// <param name="afi">The path to load from that state.</param>
         /// <returns>The loaded state of the path.</returns>
-        Task<LoadResult> LoadFile(IFileState fileState, IArchiveFileInfo afi);
+        Task<LoadResult> LoadFile(IFileState fileState, IArchiveFile afi);
 
         /// <summary>
         /// Loads a virtual path into the Kuriimu runtime.
@@ -121,7 +121,7 @@ namespace Konnect.Contract.Management.Files
         /// <param name="afi">The path to load from that state.</param>
         /// <param name="pluginId">The plugin to load this virtual file with.</param>
         /// <returns>The loaded state of the path.</returns>
-        Task<LoadResult> LoadFile(IFileState fileState, IArchiveFileInfo afi, Guid pluginId);
+        Task<LoadResult> LoadFile(IFileState fileState, IArchiveFile afi, Guid pluginId);
 
         /// <summary>
         /// Loads a virtual path into the Kuriimu runtime.
@@ -130,7 +130,7 @@ namespace Konnect.Contract.Management.Files
         /// <param name="afi">The path to load from that state.</param>
         /// <param name="loadFileContext">The context with additional parameters for the load process.</param>
         /// <returns>The loaded state of the path.</returns>
-        Task<LoadResult> LoadFile(IFileState fileState, IArchiveFileInfo afi, LoadFileContext loadFileContext);
+        Task<LoadResult> LoadFile(IFileState fileState, IArchiveFile afi, LoadFileContext loadFileContext);
 
         #endregion
 

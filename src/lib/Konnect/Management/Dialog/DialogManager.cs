@@ -24,7 +24,7 @@ namespace Konnect.Management.Dialog
         }
 
         /// <inheritdoc />
-        public void ShowDialog(params DialogField[] fields)
+        public async Task<bool> ShowDialog(params DialogField[] fields)
         {
             // If no dialog Manager is given and not enough predefined options are available.
             if (_options.Count - _optionIndex < fields.Length)
@@ -42,17 +42,23 @@ namespace Konnect.Management.Dialog
 
             // If all fields were already processed by predefined options
             if (fieldIndex >= fields.Length)
-                return;
+                return true;
 
             // Collect results from dialog manager if predefined options are exhausted
             DialogField[] subFields = fields.Skip(fieldIndex).ToArray();
-            _dialogManager?.ShowDialog(subFields);
+            if (_dialogManager != null)
+            {
+                var result = await _dialogManager.ShowDialog(subFields);
+                if (!result) return false;
+            }
 
             foreach (DialogField subField in subFields)
             {
                 if (subField.Result != null)
                     DialogOptions.Add(subField.Result);
             }
+
+            return true;
         }
     }
 }

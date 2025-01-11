@@ -6,11 +6,10 @@ using Serilog;
 
 namespace Konnect.Management.Streams
 {
-    // TODO: Make internal again
     /// <summary>
     /// Provides and manages streams and their lifetime.
     /// </summary>
-    internal class StreamManager : IStreamManager
+    public class StreamManager : IStreamManager
     {
         private readonly System.Timers.Timer _streamCollectionTimer;
         private readonly object _releaseLock = new object();

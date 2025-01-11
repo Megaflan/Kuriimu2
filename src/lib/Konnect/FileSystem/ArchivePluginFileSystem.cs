@@ -12,25 +12,24 @@ namespace Konnect.FileSystem
     /// <summary>
     /// Provides a <see cref="IFileSystem"/> for an <see cref="IArchiveState"/>.
     /// </summary>
-    class AfiFileSystem : FileSystem
+    class ArchivePluginFileSystem : FileSystem
     {
         private readonly IFileState _fileState;
         private readonly ITemporaryStreamManager _temporaryStreamManager;
 
-        private readonly IDictionary<UPath, IArchiveFileInfo> _fileDictionary;
-        private readonly IDictionary<UPath, (IList<UPath>, IList<IArchiveFileInfo>)> _directoryDictionary;
-
-        // TODO this cast smells, should IFileState/IPluginState be generified?
+        private readonly IDictionary<UPath, IArchiveFile> _fileDictionary;
+        private readonly IDictionary<UPath, (IList<UPath>, IList<IArchiveFile>)> _directoryDictionary;
+        
         protected IArchiveFilePluginState ArchiveState => _fileState.PluginState as IArchiveFilePluginState;
 
         protected UPath SubPath => _fileState.AbsoluteDirectory / _fileState.FilePath.ToRelative();
 
         /// <summary>
-        /// Creates a new instance of <see cref="AfiFileSystem"/>.
+        /// Creates a new instance of <see cref="ArchivePluginFileSystem"/>.
         /// </summary>
         /// <param name="fileState">The <see cref="IFileState"/> to retrieve files from.</param>
         /// <param name="streamManager">The stream manager to scope streams in.</param>
-        public AfiFileSystem(IFileState fileState, IStreamManager streamManager) : base(streamManager)
+        public ArchivePluginFileSystem(IFileState fileState, IStreamManager streamManager) : base(streamManager)
         {
             if (fileState.PluginState is not IArchiveFilePluginState)
                 throw new InvalidOperationException("The state is not an archive.");
@@ -42,7 +41,7 @@ namespace Konnect.FileSystem
             _directoryDictionary = CreateDirectoryLookup();
         }
 
-        private AfiFileSystem(IFileState fileState, IStreamManager streamManager, IList<Watcher.FileSystemWatcher> watchers) :
+        private ArchivePluginFileSystem(IFileState fileState, IStreamManager streamManager, IList<Watcher.FileSystemWatcher> watchers) :
             this(fileState, streamManager)
         {
             foreach (var watcher in watchers)
@@ -52,7 +51,7 @@ namespace Konnect.FileSystem
         /// <inheritdoc />
         public override IFileSystem Clone(IStreamManager streamManager)
         {
-            return new AfiFileSystem(_fileState, streamManager);
+            return new ArchivePluginFileSystem(_fileState, streamManager);
         }
 
         // ----------------------------------------------
@@ -282,7 +281,7 @@ namespace Konnect.FileSystem
                 throw new FileNotFoundException($"Could not find file `{path}`.");
             }
 
-            IArchiveFileInfo afi;
+            IArchiveFile afi;
             switch (mode)
             {
                 case FileMode.Open:
@@ -374,7 +373,7 @@ namespace Konnect.FileSystem
             var afi = GetAfi(path);
             return new AfiFileEntry
             {
-                ArchiveFileInfo = afi,
+                ArchiveFile = afi,
                 Path = afi.FilePath,
                 Size = afi.FileSize
             };
@@ -485,12 +484,12 @@ namespace Konnect.FileSystem
 
         #region Directory tree
 
-        private IDictionary<UPath, (IList<UPath>, IList<IArchiveFileInfo>)> CreateDirectoryLookup()
+        private IDictionary<UPath, (IList<UPath>, IList<IArchiveFile>)> CreateDirectoryLookup()
         {
-            var result = new Dictionary<UPath, (IList<UPath>, IList<IArchiveFileInfo>)>
+            var result = new Dictionary<UPath, (IList<UPath>, IList<IArchiveFile>)>
             {
                 // Add root manually
-                [UPath.Root] = (new List<UPath>(), new List<IArchiveFileInfo>())
+                [UPath.Root] = (new List<UPath>(), new List<IArchiveFile>())
             };
 
             foreach (var file in ArchiveState.Files)
@@ -504,7 +503,7 @@ namespace Konnect.FileSystem
             return result;
         }
 
-        private IArchiveFileInfo CreateFileInternal(Stream fileData, UPath newFilePath)
+        private IArchiveFile CreateFileInternal(Stream fileData, UPath newFilePath)
         {
             if (!ArchiveState.CanAddFiles)
                 return null;
@@ -524,14 +523,14 @@ namespace Konnect.FileSystem
             CreateDirectoryEntries(_directoryDictionary, newPath);
         }
 
-        private void CreateDirectoryEntries(IDictionary<UPath, (IList<UPath>, IList<IArchiveFileInfo>)> directories, UPath newPath)
+        private void CreateDirectoryEntries(IDictionary<UPath, (IList<UPath>, IList<IArchiveFile>)> directories, UPath newPath)
         {
             var path = UPath.Root;
             foreach (var part in newPath.Split())
             {
                 // Initialize parent entry if not existing
                 if (!directories.ContainsKey(path))
-                    directories[path] = (new List<UPath>(), new List<IArchiveFileInfo>());
+                    directories[path] = (new List<UPath>(), new List<IArchiveFile>());
 
                 // Add current directory to parent
                 if (!directories[path].Item1.Contains(path / part))
@@ -541,13 +540,13 @@ namespace Konnect.FileSystem
 
                 // Initialize current directory if not existing
                 if (!directories.ContainsKey(path))
-                    directories[path] = (new List<UPath>(), new List<IArchiveFileInfo>());
+                    directories[path] = (new List<UPath>(), new List<IArchiveFile>());
             }
         }
 
         #endregion
 
-        private IArchiveFileInfo GetAfi(UPath filePath)
+        private IArchiveFile GetAfi(UPath filePath)
         {
             if (!_fileDictionary.ContainsKey(filePath))
                 return null;

@@ -162,11 +162,11 @@ namespace Konnect.Management.Files
             return CanIdentify(fileSystem, filePath.GetSubDirectory(root), streamManager, pluginId);
         }
 
-        public Task<bool> CanIdentify(IFileState fileState, IArchiveFileInfo afi, Guid pluginId)
+        public Task<bool> CanIdentify(IFileState fileState, IArchiveFile afi, Guid pluginId)
         {
             // 1. Create file system
             var streamManager = CreateStreamManager();
-            var fileSystem = FileSystemFactory.CreateAfiFileSystem(fileState, UPath.Root, streamManager);
+            var fileSystem = FileSystemFactory.CreateArchivePluginFileSystem(fileState, UPath.Root, streamManager);
 
             // 2. Identify file
             return CanIdentify(fileSystem, afi.FilePath, streamManager, pluginId);
@@ -259,14 +259,15 @@ namespace Konnect.Management.Files
                     return new LoadResult
                     {
                         Status = LoadStatus.Errored,
-                        Message = $"File {file} is already loading."
+                        Reason = LoadErrorReason.Loading
                     };
 
                 if (IsLoaded(file))
                     return new LoadResult
                     {
                         Status = LoadStatus.Successful,
-                        LoadedFileState = GetLoadedFile(file)
+                        LoadedFileState = GetLoadedFile(file),
+                        Reason = LoadErrorReason.None
                     };
 
                 _loadingFiles.Add(file);
@@ -287,7 +288,7 @@ namespace Konnect.Management.Files
         #region Load ArchiveFileInfo
 
         /// <inheritdoc />
-        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFileInfo afi)
+        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFile afi)
         {
             return LoadFile(fileState, afi, new LoadFileContext
             {
@@ -296,7 +297,7 @@ namespace Konnect.Management.Files
         }
 
         /// <inheritdoc />
-        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFileInfo afi, Guid pluginId)
+        public Task<LoadResult> LoadFile(IFileState fileState, IArchiveFile afi, Guid pluginId)
         {
             return LoadFile(fileState, afi, new LoadFileContext
             {
@@ -306,7 +307,7 @@ namespace Konnect.Management.Files
         }
 
         /// <inheritdoc />
-        public async Task<LoadResult> LoadFile(IFileState fileState, IArchiveFileInfo afi, LoadFileContext loadFileContext)
+        public async Task<LoadResult> LoadFile(IFileState fileState, IArchiveFile afi, LoadFileContext loadFileContext)
         {
             // If fileState is no archive state
             if (fileState.PluginState is not IArchiveFilePluginState)
@@ -320,14 +321,15 @@ namespace Konnect.Management.Files
                     return new LoadResult
                     {
                         Status = LoadStatus.Errored,
-                        Message = $"File {absoluteFilePath} is already loading."
+                        Reason = LoadErrorReason.Loading
                     };
 
                 if (IsLoaded(absoluteFilePath))
                     return new LoadResult
                     {
                         Status = LoadStatus.Successful,
-                        LoadedFileState = GetLoadedFile(absoluteFilePath)
+                        LoadedFileState = GetLoadedFile(absoluteFilePath),
+                        Reason = LoadErrorReason.None
                     };
 
                 _loadingFiles.Add(absoluteFilePath);
@@ -335,7 +337,7 @@ namespace Konnect.Management.Files
 
             // 1. Create file system
             var streamManager = CreateStreamManager();
-            var fileSystem = FileSystemFactory.CreateAfiFileSystem(fileState, UPath.Root, streamManager);
+            var fileSystem = FileSystemFactory.CreateArchivePluginFileSystem(fileState, UPath.Root, streamManager);
 
             // 2. Load file
             // IArchiveFileInfos have fileState as their parent, if loaded like this
@@ -419,14 +421,15 @@ namespace Konnect.Management.Files
                     return new LoadResult
                     {
                         Status = LoadStatus.Errored,
-                        Message = $"File {absoluteFilePath} is already loading."
+                        Reason = LoadErrorReason.Loading
                     };
 
                 if (IsLoaded(absoluteFilePath))
                     return new LoadResult
                     {
                         Status = LoadStatus.Successful,
-                        LoadedFileState = GetLoadedFile(absoluteFilePath)
+                        LoadedFileState = GetLoadedFile(absoluteFilePath),
+                        Reason = LoadErrorReason.None
                     };
 
                 _loadingFiles.Add(absoluteFilePath);
@@ -554,7 +557,7 @@ namespace Konnect.Management.Files
                 return new SaveResult
                 {
                     IsSuccessful = false,
-                    Message = "The given file is already closed."
+                    Reason = SaveErrorReason.Closed
                 };
 
             lock (_saveLock)
@@ -563,14 +566,14 @@ namespace Konnect.Management.Files
                     return new SaveResult
                     {
                         IsSuccessful = false,
-                        Message = $"File {fileState.AbsoluteDirectory / fileState.FilePath.ToRelative()} is already saving."
+                        Reason = SaveErrorReason.Saving
                     };
 
                 if (IsClosing(fileState))
                     return new SaveResult
                     {
                         IsSuccessful = false,
-                        Message = $"File {fileState.AbsoluteDirectory / fileState.FilePath.ToRelative()} is currently closing."
+                        Reason = SaveErrorReason.Closing
                     };
 
                 _savingStates.Add(fileState);
@@ -581,7 +584,7 @@ namespace Konnect.Management.Files
                     return new SaveResult
                     {
                         IsSuccessful = false,
-                        Message = "The given file is not loaded anymore."
+                        Reason = SaveErrorReason.NotLoaded
                     };
 
             var isRunning = Progress.IsRunning();
@@ -612,7 +615,7 @@ namespace Konnect.Management.Files
                 return new SaveStreamResult
                 {
                     IsSuccessful = false,
-                    Message = "The given file is already closed."
+                    Reason = SaveErrorReason.Closed
                 };
 
             lock (_saveLock)
@@ -621,14 +624,14 @@ namespace Konnect.Management.Files
                     return new SaveStreamResult
                     {
                         IsSuccessful = false,
-                        Message = $"File {fileState.AbsoluteDirectory / fileState.FilePath.ToRelative()} is already saving."
+                        Reason = SaveErrorReason.Saving
                     };
 
                 if (IsClosing(fileState))
                     return new SaveStreamResult
                     {
                         IsSuccessful = false,
-                        Message = $"File {fileState.AbsoluteDirectory / fileState.FilePath.ToRelative()} is currently closing."
+                        Reason = SaveErrorReason.Closing
                     };
 
                 _savingStates.Add(fileState);
@@ -639,7 +642,7 @@ namespace Konnect.Management.Files
                     return new SaveStreamResult
                     {
                         IsSuccessful = false,
-                        Message = "The given file is not loaded anymore."
+                        Reason = SaveErrorReason.NotLoaded
                     };
 
             var isRunning = Progress.IsRunning();
@@ -663,7 +666,8 @@ namespace Konnect.Management.Files
                 return new SaveStreamResult
                 {
                     IsSuccessful = false,
-                    Exception = saveResult.Exception
+                    Exception = saveResult.Exception,
+                    Reason = saveResult.Reason
                 };
 
             // Collect all StreamFiles from memory file system
@@ -677,8 +681,8 @@ namespace Konnect.Management.Files
             return new SaveStreamResult
             {
                 IsSuccessful = true,
-                Message = saveResult.Message,
-                SavedStreams = streamFiles
+                SavedStreams = streamFiles,
+                Reason = SaveErrorReason.None
             };
         }
 
@@ -697,7 +701,8 @@ namespace Konnect.Management.Files
             if (fileState.IsDisposed)
                 return new CloseResult
                 {
-                    IsSuccessful = true
+                    IsSuccessful = true,
+                    Reason = CloseErrorReason.None
                 };
 
             lock (_closeLock)
@@ -706,14 +711,14 @@ namespace Konnect.Management.Files
                     return new CloseResult
                     {
                         IsSuccessful = false,
-                        Message = $"File {fileState.AbsoluteDirectory / fileState.FilePath.ToRelative()} is already closing."
+                        Reason = CloseErrorReason.Closing
                     };
 
                 if (IsSaving(fileState))
                     return new CloseResult
                     {
                         IsSuccessful = false,
-                        Message = $"File {fileState.AbsoluteDirectory / fileState.FilePath.ToRelative()} is currently saving."
+                        Reason = CloseErrorReason.Saving
                     };
 
                 _closingStates.Add(fileState);
@@ -724,7 +729,7 @@ namespace Konnect.Management.Files
                     return new CloseResult
                     {
                         IsSuccessful = false,
-                        Message = "The given file is not loaded anymore."
+                        Reason = CloseErrorReason.NotLoaded
                     };
 
             // Remove state from its parent
@@ -737,7 +742,8 @@ namespace Konnect.Management.Files
 
             return new CloseResult
             {
-                IsSuccessful = true
+                IsSuccessful = true,
+                Reason = CloseErrorReason.None
             };
         }
 
