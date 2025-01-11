@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Threading.Tasks;
 using ImGui.Forms;
 using ImGui.Forms.Controls;
@@ -15,29 +16,30 @@ using ImGui.Forms.Controls.Menu;
 using ImGui.Forms.Localization;
 using ImGui.Forms.Modals;
 using ImGui.Forms.Modals.IO;
-using ImGui.Forms.Models;
-using Kontract.Extensions;
-using Kontract.Interfaces.Managers.Files;
-using Kontract.Interfaces.Plugins.Entry;
-using Kontract.Interfaces.Plugins.Loaders;
-using Kontract.Interfaces.Plugins.State;
-using Kontract.Interfaces.Plugins.State.Archive;
-using Kontract.Models.FileSystem;
-using Kontract.Models.Managers.Files;
-using Kontract.Models.Plugins.Loaders;
-using Kore.Extensions;
-using Kore.Implementation.Managers.Files;
-using Kore.Implementation.Progress;
-using Kore.Models.Managers.Files;
-using Kore.Models.Update;
-using Kore.Update;
+using Konnect.Contract.DataClasses.FileSystem;
+using Konnect.Contract.DataClasses.Management.Files;
+using Konnect.Contract.DataClasses.Management.Files.Events;
+using Konnect.Contract.DataClasses.Management.Plugin.Loaders;
+using Konnect.Contract.Enums.Management.Files;
+using Konnect.Contract.Management.Files;
+using Konnect.Contract.Management.Plugin;
+using Konnect.Contract.Plugin.File;
+using Konnect.Contract.Plugin.File.Archive;
+using Konnect.Contract.Plugin.File.Hex;
+using Konnect.Contract.Plugin.File.Image;
+using Konnect.Contract.Progress;
+using Konnect.Extensions;
+using Konnect.Management.Files;
+using Konnect.Management.Plugin;
+using Konnect.Management.Plugin.Loaders;
+using Konnect.Progress;
 using Kuriimu2.ImGui.Forms.Dialogs;
 using Kuriimu2.ImGui.Forms.Formats;
 using Kuriimu2.ImGui.Interfaces;
 using Kuriimu2.ImGui.Models;
 using Kuriimu2.ImGui.Progress;
 using Kuriimu2.ImGui.Resources;
-using Newtonsoft.Json;
+using Kuriimu2.ImGui.Update;
 using Serilog;
 
 namespace Kuriimu2.ImGui.Forms
@@ -49,8 +51,9 @@ namespace Kuriimu2.ImGui.Forms
         private readonly Manifest _localManifest;
 
         private readonly ILogger _logger;
-        private readonly ProgressContext _progress;
-        private readonly KoreFileManager _koreFileManager;
+        private readonly IProgressContext _progress;
+        private readonly IFileManager _fileManager;
+        private readonly IPluginManager _pluginManager;
 
         private readonly IDictionary<IFileState, OpenedFile> _stateDictionary = new Dictionary<IFileState, OpenedFile>();
         private readonly IDictionary<TabPage, OpenedFile> _tabDictionary = new Dictionary<TabPage, OpenedFile>();
@@ -75,7 +78,8 @@ namespace Kuriimu2.ImGui.Forms
 
             _logger = LoadLogger();
             _progress = LoadProgressContext(_progressBar);
-            _koreFileManager = LoadFileManager(_logger, _progress);
+            _pluginManager = LoadPluginManager();
+            _fileManager = LoadFileManager(_logger, _pluginManager, _progress);
 
             #endregion
 
@@ -85,7 +89,7 @@ namespace Kuriimu2.ImGui.Forms
             Closing += MainForm_Closing;
             DragDrop += MainForm_DragDrop;
 
-            _koreFileManager.OnManualSelection += KoreFileManagerOnManualSelection;
+            _fileManager.OnManualSelection += FileManagerOnManualSelection;
 
             _includeDevBuildsButton.CheckChanged += _includeDevBuildsButton_CheckChanged;
             _changeLanguageMenu.SelectedItemChanged += _changeLanguageMenu_SelectedItemChanged;
@@ -117,16 +121,15 @@ namespace Kuriimu2.ImGui.Forms
 #endif
 
             // Set stored theme
-            if (Enum.TryParse<Theme>(Settings.Default.Theme, out var parsedTheme))
-                Style.ChangeTheme(parsedTheme);
+            Style.ChangeTheme(SettingsResources.Theme);
 
             // Set stored localization
-            LocalizationResources.Instance.ChangeLocale(Settings.Default.Locale);
+            LocalizationResources.Instance.ChangeLocale(SettingsResources.Locale);
 
             // Show plugin load errors
             // TODO: Change to small label at bottom of window "Some plugins couldn't be loaded."
             // TODO: Add menu bar button to show which plugins were loaded successfully and which did not and why
-            await DisplayPluginErrors(_koreFileManager.LoadErrors);
+            await DisplayPluginErrors(_pluginManager.GetErrors());
         }
 
         private async Task MainForm_Closing(object sender, ClosingEventArgs e)
@@ -167,9 +170,10 @@ namespace Kuriimu2.ImGui.Forms
             }
         }
 
-        private async void MainForm_DragDrop(object sender, Veldrid.Sdl2.DragDropEvent e)
+        private async void MainForm_DragDrop(object sender, Veldrid.Sdl2.DragDropEvent[] e)
         {
-            await OpenPhysicalFiles(new List<string> { e.File }, false);
+            foreach (var dropEvent in e)
+                await OpenPhysicalFiles(new List<string> { dropEvent.File }, false);
         }
 
         #endregion
@@ -197,16 +201,15 @@ namespace Kuriimu2.ImGui.Forms
 
         private void _includeDevBuildsButton_CheckChanged(object sender, EventArgs e)
         {
-            Settings.Default.IncludeDevBuilds = ((MenuBarCheckBox)sender).Checked;
-            Settings.Default.Save();
+            SettingsResources.IncludeDevBuilds = _includeDevBuildsButton.Checked;
         }
 
         private void _changeLanguageMenu_SelectedItemChanged(object sender, EventArgs e)
         {
-            var locale = LocalizationResources.Instance.GetLocaleByName(((MenuBarRadio)sender).SelectedItem.Text);
+            if (!_localeItems.TryGetValue(_changeLanguageMenu.SelectedItem, out string locale))
+                return;
 
-            Settings.Default.Locale = locale;
-            Settings.Default.Save();
+            SettingsResources.Locale = locale;
 
             LocalizationResources.Instance.ChangeLocale(locale);
         }
@@ -215,8 +218,7 @@ namespace Kuriimu2.ImGui.Forms
         {
             var theme = _themes[((MenuBarRadio)sender).SelectedItem];
 
-            Settings.Default.Theme = theme.ToString();
-            Settings.Default.Save();
+            SettingsResources.Theme = theme;
 
             Style.ChangeTheme(theme);
 
@@ -228,7 +230,7 @@ namespace Kuriimu2.ImGui.Forms
 
         #region File manager
 
-        private async void KoreFileManagerOnManualSelection(object sender, KoreFileManager.ManualSelectionEventArgs e)
+        private async void FileManagerOnManualSelection(object sender, ManualSelectionEventArgs e)
         {
             var selectedPlugin = await ChoosePlugin(e.FilePlugins.ToArray(), e.FilteredFilePlugins.ToArray(), e.SelectionStatus);
             if (selectedPlugin != null)
@@ -279,7 +281,7 @@ namespace Kuriimu2.ImGui.Forms
 
         private Manifest LoadLocalManifest()
         {
-            return JsonConvert.DeserializeObject<Manifest>(BinaryResources.VersionManifest);
+            return JsonSerializer.Deserialize<Manifest>(BinaryResources.VersionManifest);
         }
 
         private ILogger LoadLogger()
@@ -293,16 +295,21 @@ namespace Kuriimu2.ImGui.Forms
             return new ProgressContext(new ProgressBarOutput(progressBar, 20));
         }
 
-        private KoreFileManager LoadFileManager(ILogger logger, ProgressContext progress)
+        private IPluginManager LoadPluginManager()
         {
-            var pluginPath = Path.Combine(GetBaseDirectory(), "plugins");
+            string pluginPath = Path.Combine(GetBaseDirectory(), "plugins");
 
-            return new KoreFileManager(pluginPath)
+            return new PluginManager(new FilePluginLoader(pluginPath));
+        }
+
+        private IFileManager LoadFileManager(ILogger logger, IPluginManager pluginManager, IProgressContext progress)
+        {
+            return new FileManager(pluginManager)
             {
                 AllowManualSelection = true,
 
                 Progress = progress,
-                DialogManager = new DialogManager(),
+                DialogManager = new ImGuiDialogManager(),
                 Logger = logger
             };
         }
@@ -331,7 +338,7 @@ namespace Kuriimu2.ImGui.Forms
             foreach (var fileToOpen in filesToOpen)
             {
                 var loadAction = new Func<IFilePlugin, Task<LoadResult>>(plugin =>
-                    _koreFileManager.LoadFile(fileToOpen, plugin?.PluginId ?? Guid.Empty));
+                    _fileManager.LoadFile(fileToOpen, plugin?.PluginId ?? Guid.Empty));
                 var tabColor = Color.FromArgb(_rand.Next(256), _rand.Next(256), _rand.Next(256));
 
                 await OpenFile(fileToOpen, manualIdentification, loadAction, tabColor);
@@ -350,16 +357,16 @@ namespace Kuriimu2.ImGui.Forms
             }
 
             // Check if file is already loading
-            if (_koreFileManager.IsLoading(filePath))
+            if (_fileManager.IsLoading(filePath))
             {
                 ReportStatus(StatusKind.Failure, LocalizationResources.StatusFileLoadOpening(filePath));
                 return true;
             }
 
             // Check if file is already opened
-            if (_koreFileManager.IsLoaded(filePath))
+            if (_fileManager.IsLoaded(filePath))
             {
-                var selectedTabPage = _stateDictionary[_koreFileManager.GetLoadedFile(filePath)].TabPage;
+                var selectedTabPage = _stateDictionary[_fileManager.GetLoadedFile(filePath)].TabPage;
                 _tabControl.SelectedPage = selectedTabPage;
 
                 return true;
@@ -369,9 +376,9 @@ namespace Kuriimu2.ImGui.Forms
             IFilePlugin chosenPlugin = null;
             if (manualIdentification)
             {
-                var allPlugins = _koreFileManager.GetFilePlugins().ToArray();
+                var allPlugins = _pluginManager.GetPlugins<IFilePlugin>().ToArray();
 
-                chosenPlugin = await ChoosePlugin(allPlugins, allPlugins, KoreFileManager.SelectionStatus.All);
+                chosenPlugin = await ChoosePlugin(allPlugins, allPlugins, SelectionStatus.All);
                 if (chosenPlugin == null)
                 {
                     ReportStatus(StatusKind.Failure, LocalizationResources.StatusPluginSelectNone);
@@ -380,15 +387,15 @@ namespace Kuriimu2.ImGui.Forms
             }
 
             // Load file
-            var loadResult = (KoreLoadResult)await loadFileFunc(chosenPlugin);
-            if (loadResult.IsCancelled)
+            var loadResult = await loadFileFunc(chosenPlugin);
+            if (loadResult.Status == LoadStatus.Cancelled)
             {
                 // Load was canceled
                 ReportStatus(StatusKind.Failure, LocalizationResources.StatusFileLoadCancel);
                 return false;
             }
 
-            if (!loadResult.IsSuccessful)
+            if (loadResult.Status != LoadStatus.Successful)
             {
                 ReportStatus(StatusKind.Failure, GetReasonString(filePath, loadResult.Reason));
                 return false;
@@ -398,7 +405,7 @@ namespace Kuriimu2.ImGui.Forms
             var wasAdded = await AddTabPage(loadResult.LoadedFileState, tabColor);
             if (!wasAdded)
             {
-                _koreFileManager.Close(loadResult.LoadedFileState);
+                _fileManager.Close(loadResult.LoadedFileState);
                 return false;
             }
 
@@ -454,7 +461,7 @@ namespace Kuriimu2.ImGui.Forms
             ReportStatus(StatusKind.Info, LocalizationResources.StatusFileSaveStart(fileState.FilePath.ToRelative()));
 
             // Check if file is already attempted to be saved
-            if (_koreFileManager.IsSaving(fileState))
+            if (_fileManager.IsSaving(fileState))
             {
                 ReportStatus(StatusKind.Failure, LocalizationResources.StatusFileLoadSaving(fileState.FilePath.ToRelative()));
                 return false;
@@ -473,8 +480,8 @@ namespace Kuriimu2.ImGui.Forms
             }
 
             var saveResult = savePath.IsEmpty ?
-                (KoreSaveResult)await _koreFileManager.SaveFile(fileState) :
-                (KoreSaveResult)await _koreFileManager.SaveFile(fileState, savePath.FullName);
+                await _fileManager.SaveFile(fileState) :
+                await _fileManager.SaveFile(fileState, savePath.FullName);
 
             if (!saveResult.IsSuccessful)
             {
@@ -576,7 +583,7 @@ namespace Kuriimu2.ImGui.Forms
                 switch (result)
                 {
                     case DialogResult.Yes:
-                        var saveResult = (KoreSaveResult)await _koreFileManager.SaveFile(fileState);
+                        var saveResult = await _fileManager.SaveFile(fileState);
                         if (!saveResult.IsSuccessful)
                         {
                             ReportStatus(StatusKind.Failure, GetReasonString(fileState.FilePath.ToRelative(), saveResult.Reason));
@@ -600,7 +607,7 @@ namespace Kuriimu2.ImGui.Forms
 
             // Close all related states
             var parentState = fileState.ParentFileState;
-            var closeResult = (KoreCloseResult)_koreFileManager.Close(fileState);
+            var closeResult = _fileManager.Close(fileState);
 
             // If closing of the state was not successful
             if (!closeResult.IsSuccessful)
@@ -667,8 +674,8 @@ namespace Kuriimu2.ImGui.Forms
 
         private async Task<DialogResult> ShowAboutDialog()
         {
-            var AboutDialog = new AboutDialog();
-            return await AboutDialog.ShowAsync();
+            var aboutDialog = new AboutDialog();
+            return await aboutDialog.ShowAsync();
         }
 
         #endregion
@@ -759,7 +766,7 @@ namespace Kuriimu2.ImGui.Forms
             var platform = GetCurrentPlatform();
 
             var remoteManifest = UpdateUtilities.GetRemoteManifest(string.Format(ManifestUrl_, platform));
-            if (!UpdateUtilities.IsUpdateAvailable(remoteManifest, _localManifest, Settings.Default.IncludeDevBuilds))
+            if (!UpdateUtilities.IsUpdateAvailable(remoteManifest, _localManifest, SettingsResources.IncludeDevBuilds))
                 return;
 
             var result = await MessageBox.ShowYesNoAsync(LocalizationResources.DialogUpdateAvailableCaption,
@@ -828,10 +835,10 @@ namespace Kuriimu2.ImGui.Forms
 
         private async Task<string> SelectFile()
         {
-            var ofd = new OpenFileDialog { InitialDirectory = Settings.Default.LastDirectory };
+            var ofd = new OpenFileDialog { InitialDirectory = SettingsResources.LastDirectory };
 
             // Set file filters
-            foreach (var filter in GetFileFilters(_koreFileManager.GetFilePluginLoaders()).OrderBy(x => $"{x.Name}"))
+            foreach (var filter in GetFileFilters(_pluginManager).OrderBy(x => $"{x.Name}"))
                 ofd.FileFilters.Add(filter);
 
             // Show dialog and wait for result
@@ -840,26 +847,25 @@ namespace Kuriimu2.ImGui.Forms
                 return null;
 
             // Set last visited directory
-            Settings.Default.LastDirectory = Path.GetDirectoryName(ofd.SelectedPath);
-            Settings.Default.Save();
+            SettingsResources.LastDirectory = Path.GetDirectoryName(ofd.SelectedPath);
 
             return ofd.SelectedPath;
         }
 
-        private async Task<IFilePlugin> ChoosePlugin(IList<IFilePlugin> allFilePlugins, IList<IFilePlugin> filteredFilePlugins, KoreFileManager.SelectionStatus status)
+        private async Task<IFilePlugin> ChoosePlugin(IList<IFilePlugin> allFilePlugins, IList<IFilePlugin> filteredFilePlugins, SelectionStatus status)
         {
             var pluginDialog = new ChoosePluginDialog(allFilePlugins, filteredFilePlugins, status);
             return await pluginDialog.ShowAsync() == DialogResult.Ok ? pluginDialog.SelectedPlugin : null;
         }
 
-        private IList<FileFilter> GetFileFilters(IPluginLoader<IFilePlugin>[] pluginLoaders)
+        private IList<FileFilter> GetFileFilters(IPluginManager pluginManager)
         {
             var filters = new List<FileFilter>
             {
                 new FileFilter(LocalizationResources.FilterAll, string.Empty)
             };
 
-            foreach (var plugin in pluginLoaders.SelectMany(x => x.Plugins).Where(x => x.FileExtensions != null))
+            foreach (var plugin in pluginManager.GetPlugins<IFilePlugin>().Where(x => x.FileExtensions?.Any() ?? false))
             {
                 var pluginName = plugin.Metadata?.Name ?? plugin.GetType().Name;
                 filters.Add(new FileFilter(pluginName, plugin.FileExtensions.Select(x => x.Replace("*.", "")).ToArray()));
@@ -882,16 +888,16 @@ namespace Kuriimu2.ImGui.Forms
                     //    kuriimuForm = new TextForm(new FormInfo<ITextState>(fileState, communicator, _progress, _logger));
                     //    break;
 
-                    case IImageState _:
-                        kuriimuForm = new ImageForm(new FormInfo<IImageState>(fileState, communicator, _progress, _logger));
+                    case IImageFilePluginState _:
+                        kuriimuForm = new ImageForm(new FormInfo<IImageFilePluginState>(fileState, communicator, _progress, _logger));
                         break;
 
-                    case IArchiveState _:
-                        kuriimuForm = new ArchiveForm(new ArchiveFormInfo(fileState, communicator, _progress, _logger), _koreFileManager);
+                    case IArchiveFilePluginState _:
+                        kuriimuForm = new ArchiveForm(new ArchiveFormInfo(fileState, communicator, _progress, _logger), _pluginManager, _fileManager);
                         break;
 
-                    case IRawState _:
-                        kuriimuForm = new RawForm(new FormInfo<IRawState>(fileState, communicator, _progress, _logger));
+                    case IHexFilePluginState _:
+                        kuriimuForm = new RawForm(new FormInfo<IHexFilePluginState>(fileState, communicator, _progress, _logger));
                         break;
 
                     default:
@@ -934,11 +940,11 @@ namespace Kuriimu2.ImGui.Forms
 
         #region IMainForm implementation
 
-        public Task<bool> OpenFile(IFileState fileState, IArchiveFileInfo file, Guid pluginId)
+        public Task<bool> OpenFile(IFileState fileState, IArchiveFile file, Guid pluginId)
         {
             var absoluteFilePath = fileState.AbsoluteDirectory / fileState.FilePath.ToRelative() / file.FilePath.ToRelative();
             var loadAction = new Func<IFilePlugin, Task<LoadResult>>(_ =>
-                _koreFileManager.LoadFile(fileState, file, pluginId));
+                _fileManager.LoadFile(fileState, file, pluginId));
             var tabColor = _stateDictionary[fileState].TabColor;
 
             return OpenFile(absoluteFilePath, false, loadAction, tabColor);
@@ -949,23 +955,23 @@ namespace Kuriimu2.ImGui.Forms
             return SaveFile(fileState, saveAs, false);
         }
 
-        public Task<bool> CloseFile(IFileState fileState, IArchiveFileInfo file)
+        public Task<bool> CloseFile(IFileState fileState, IArchiveFile file)
         {
             var absolutePath = fileState.AbsoluteDirectory / fileState.FilePath.ToRelative() / file.FilePath.ToRelative();
-            if (!_koreFileManager.IsLoaded(absolutePath))
+            if (!_fileManager.IsLoaded(absolutePath))
                 return Task.FromResult(true);
 
-            var loadedFile = _koreFileManager.GetLoadedFile(absolutePath);
+            var loadedFile = _fileManager.GetLoadedFile(absolutePath);
             return CloseFile(loadedFile);
         }
 
-        public void RenameFile(IFileState fileState, IArchiveFileInfo file, UPath newPath)
+        public void RenameFile(IFileState fileState, IArchiveFile file, UPath newPath)
         {
             var absolutePath = fileState.AbsoluteDirectory / fileState.FilePath.ToRelative() / file.FilePath.ToRelative();
-            if (!_koreFileManager.IsLoaded(absolutePath))
+            if (!_fileManager.IsLoaded(absolutePath))
                 return;
 
-            var loadedFile = _koreFileManager.GetLoadedFile(absolutePath);
+            var loadedFile = _fileManager.GetLoadedFile(absolutePath);
             loadedFile.RenameFilePath(newPath);
 
             UpdateTab(loadedFile, true, false);

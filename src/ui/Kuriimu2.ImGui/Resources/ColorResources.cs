@@ -1,8 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
+﻿using System.Collections.Generic;
 using ImGui.Forms;
 using ImGui.Forms.Models;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Kuriimu2.ImGui.Resources
 {
@@ -14,17 +14,17 @@ namespace Kuriimu2.ImGui.Resources
         {
             [Theme.Dark] = new Dictionary<uint, Color>
             {
-                [ImGuiColMax_ + 1] = Color.FromArgb(0x49, 0xe7, 0x9a),
-                [ImGuiColMax_ + 2] = Color.FromArgb(0xcf, 0x66, 0x79),
+                [ImGuiColMax_ + 1] = new Rgba32(0x49, 0xe7, 0x9a),
+                [ImGuiColMax_ + 2] = new Rgba32(0xcf, 0x66, 0x79),
                 [ImGuiColMax_ + 3] = Color.ForestGreen,
-                [ImGuiColMax_ + 4] = Color.FromArgb(0xFF, 0xA5, 0x00)
+                [ImGuiColMax_ + 4] = new Rgba32(0xFF, 0xA5, 0x00)
             },
             [Theme.Light] = new Dictionary<uint, Color>
             {
                 [ImGuiColMax_ + 1] = Color.ForestGreen,
                 [ImGuiColMax_ + 2] = Color.DarkRed,
                 [ImGuiColMax_ + 3] = Color.ForestGreen,
-                [ImGuiColMax_ + 4] = Color.FromArgb(0xFF, 0xA5, 0x00)
+                [ImGuiColMax_ + 4] = new Rgba32(0xFF, 0xA5, 0x00)
             }
         };
 

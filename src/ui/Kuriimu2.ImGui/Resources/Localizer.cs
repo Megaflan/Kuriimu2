@@ -1,88 +1,33 @@
 ﻿using ImGui.Forms.Localization;
-using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
 
 namespace Kuriimu2.ImGui.Resources
 {
-    internal class Localizer : ILocalizer
+    internal class Localizer : BaseLocalizer
     {
         private const string NameSpace_ = "Kuriimu2.ImGui.Resources.Localizations.";
-        private const string DefaultLocale_ = "en";
-        private const string NameValue_ = "Name";
 
-        private const string Undefined_ = "<undefined>";
-
-        private readonly IDictionary<string, IDictionary<string, string>> _localizations;
-
-        public string CurrentLocale { get; private set; } = DefaultLocale_;
+        protected override string DefaultLocale => "en";
+        protected override string UndefinedValue => "<undefined>";
 
         public Localizer()
         {
-            // Load localizations
-            _localizations = GetLocalizations();
-
-            // Set default locale
-            if (_localizations.Count == 0)
-                CurrentLocale = string.Empty;
-            else if (!_localizations.ContainsKey(DefaultLocale_))
-                CurrentLocale = _localizations.FirstOrDefault().Key;
+            Initialize();
         }
 
-        public IList<string> GetLocales()
-        {
-            return _localizations.Keys.ToArray();
-        }
-
-        public string GetLanguageName(string locale)
-        {
-            if (!_localizations.ContainsKey(locale) || !_localizations[locale].ContainsKey(NameValue_))
-                return Undefined_;
-
-            return _localizations[locale][NameValue_];
-        }
-
-        public string GetLocaleByName(string name)
-        {
-            foreach (string locale in GetLocales())
-                if (GetLanguageName(locale) == name)
-                    return locale;
-
-            return Undefined_;
-        }
-
-        public void ChangeLocale(string locale)
-        {
-            // Do nothing, if locale was not found
-            if (!_localizations.ContainsKey(locale))
-                return;
-
-            CurrentLocale = locale;
-        }
-
-        public string Localize(string name, params object[] args)
-        {
-            // Return localization of current locale
-            if (!string.IsNullOrEmpty(CurrentLocale) && _localizations[CurrentLocale].ContainsKey(name))
-                return string.Format(_localizations[CurrentLocale][name], args);
-
-            // Otherwise, return localization of default locale
-            if (!string.IsNullOrEmpty(DefaultLocale_) && _localizations[DefaultLocale_].ContainsKey(name))
-                return string.Format(_localizations[DefaultLocale_][name], args);
-
-            // Otherwise, return localization placeholder
-            return Undefined_;
-        }
-
-        private IDictionary<string, IDictionary<string, string>> GetLocalizations()
+        protected override IList<LanguageInfo> InitializeLocalizations()
         {
             var assembly = Assembly.GetExecutingAssembly();
             var localNames = assembly.GetManifestResourceNames().Where(n => n.StartsWith(NameSpace_));
 
-            var result = new Dictionary<string, IDictionary<string, string>>();
+            var jsonOptions = new JsonSerializerOptions { ReadCommentHandling = JsonCommentHandling.Skip };
+
+            var result = new List<LanguageInfo>();
             foreach (string localName in localNames)
             {
                 var locStream = assembly.GetManifestResourceStream(localName);
@@ -94,10 +39,21 @@ namespace Kuriimu2.ImGui.Resources
                 var json = reader.ReadToEnd();
 
                 // Deserialize JSON
-                result.Add(GetLocale(localName), JsonConvert.DeserializeObject<IDictionary<string, string>>(json));
+                var translations = JsonSerializer.Deserialize<Dictionary<string, string>>(json, jsonOptions);
+                if (!translations.TryGetValue("Name", out string localeName))
+                    continue;
+
+                var languageInfo = new LanguageInfo(GetLocale(localName), localeName, translations);
+
+                result.Add(languageInfo);
             }
 
             return result;
+        }
+
+        protected override string InitializeLocale()
+        {
+            return SettingsResources.Locale;
         }
 
         private string GetLocale(string resourceName)

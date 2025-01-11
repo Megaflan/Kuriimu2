@@ -9,8 +9,8 @@
   "Menu.Ciphers": "암호화",
   "Menu.Compressions": "압축",
   "Menu.Settings": "설정",
-  //"Help": "도움",
-  //"AboutKuriimu2": "Kuriimu2에 관하여",
+  "Menu.Help": "도움",
+  "Menu.About.Title": "Kuriimu2에 관하여",
 
   // File sub menu
   "Menu.File.Open": "열기",

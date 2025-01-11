@@ -1,6 +1,4 @@
-﻿using ImGui.Forms.Models;
-
-namespace Kuriimu2.ImGui.Interfaces
+﻿namespace Kuriimu2.ImGui.Interfaces
 {
     interface IKuriimuForm
     {

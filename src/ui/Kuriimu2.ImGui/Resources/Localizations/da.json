@@ -9,8 +9,8 @@
   "Menu.Ciphers": "Kodesprog",
   "Menu.Compressions": "Sammenpresse",
   "Menu.Settings": "Opsætning",
-  //"Help": "Hjælp",
-  //"AboutKuriimu2": "Angående Kuriimu2",
+  "Menu.Help": "Hjælp",
+  "Menu.About.Title": "Angående Kuriimu2",
 
   // File sub menu
   "Menu.File.Open": "Åben",

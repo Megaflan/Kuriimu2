@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 using ImGui.Forms.Localization;
-using Kontract;
-using Kontract.Interfaces.Managers.Files;
-using Kontract.Interfaces.Plugins.State.Archive;
-using Kontract.Models.FileSystem;
+using Konnect.Contract.DataClasses.FileSystem;
+using Konnect.Contract.Management.Files;
+using Konnect.Contract.Plugin.File.Archive;
 using Kuriimu2.ImGui.Interfaces;
 using Kuriimu2.ImGui.Models;
 
@@ -17,9 +16,6 @@ namespace Kuriimu2.ImGui.Forms
 
         public FormCommunicator(IFileState fileState, IMainForm mainForm)
         {
-            ContractAssertions.IsNotNull(fileState, nameof(fileState));
-            ContractAssertions.IsNotNull(mainForm, nameof(mainForm));
-
             _fileState = fileState;
             _mainForm = mainForm;
         }
@@ -35,17 +31,17 @@ namespace Kuriimu2.ImGui.Forms
             return _mainForm.SaveFile(_fileState, saveAs);
         }
 
-        public Task<bool> Open(IArchiveFileInfo file)
+        public Task<bool> Open(IArchiveFile file)
         {
             return Open(file, Guid.Empty);
         }
 
-        public Task<bool> Open(IArchiveFileInfo file, Guid pluginId)
+        public Task<bool> Open(IArchiveFile file, Guid pluginId)
         {
             return _mainForm.OpenFile(_fileState, file, pluginId);
         }
 
-        public Task<bool> Close(IArchiveFileInfo file)
+        public Task<bool> Close(IArchiveFile file)
         {
             return _mainForm.CloseFile(_fileState, file);
         }
@@ -62,7 +58,7 @@ namespace Kuriimu2.ImGui.Forms
             _mainForm.Update(_fileState, updateParents, updateChildren);
         }
 
-        public void Rename(IArchiveFileInfo file, UPath renamedPath)
+        public void Rename(IArchiveFile file, UPath renamedPath)
         {
             _mainForm.RenameFile(_fileState, file, renamedPath);
         }

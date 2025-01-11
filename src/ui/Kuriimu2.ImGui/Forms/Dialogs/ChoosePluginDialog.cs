@@ -4,11 +4,10 @@ using System.Linq;
 using ImGui.Forms.Controls;
 using ImGui.Forms.Controls.Lists;
 using ImGui.Forms.Modals;
-using Kontract;
-using Kontract.Interfaces.Plugins.Entry;
-using Kontract.Models.Plugins.Entry;
-using Kore.Implementation.Managers.Files;
-using Kore.Models.UnsupportedPlugin;
+using Konnect.Contract.Enums.Management.Files;
+using Konnect.Contract.Enums.Plugin.File;
+using Konnect.Contract.Plugin.File;
+using Kuriimu2.ImGui.Models;
 using Kuriimu2.ImGui.Resources;
 
 namespace Kuriimu2.ImGui.Forms.Dialogs
@@ -20,7 +19,7 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
 
         public IFilePlugin SelectedPlugin { get; private set; }
 
-        public ChoosePluginDialog(IList<IFilePlugin> allFilePlugins, IList<IFilePlugin> filteredFilePlugins, KoreFileManager.SelectionStatus status)
+        public ChoosePluginDialog(IList<IFilePlugin> allFilePlugins, IList<IFilePlugin> filteredFilePlugins, SelectionStatus status)
         {
             InitializeComponent();
 
@@ -29,17 +28,17 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
 
             switch (status)
             {
-                case KoreFileManager.SelectionStatus.All:
+                case SelectionStatus.All:
                     _msgLabel.Text = LocalizationResources.DialogChoosePluginHeaderGeneric;
                     _showAllPlugins.Enabled = false;
                     _showAllPlugins.Checked = true;
                     break;
 
-                case KoreFileManager.SelectionStatus.MultipleMatches:
+                case SelectionStatus.MultipleMatches:
                     _msgLabel.Text = LocalizationResources.DialogChoosePluginHeaderIdentificationMultiple;
                     break;
 
-                case KoreFileManager.SelectionStatus.NonIdentifiable:
+                case SelectionStatus.NonIdentifiable:
                     _msgLabel.Text = LocalizationResources.DialogChoosePluginHeaderIdentificationNone;
                     _showAllPlugins.Tooltip = LocalizationResources.DialogChoosePluginHeaderIdentificationNote;
                     break;
@@ -59,15 +58,11 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
 
             foreach (var groupedPlugins in plugins.GroupBy(x => x.GetType().Assembly))
             {
-                var pluginElements = new List<DataTableRow<ChoosePluginElement>>();
+                var pluginElements = new System.Collections.Generic.List<DataTableRow<ChoosePluginElement>>();
                 foreach (var plugin in groupedPlugins.OrderBy(x => x.Metadata?.Name ?? string.Empty))
                     pluginElements.Add(new DataTableRow<ChoosePluginElement>(new ChoosePluginElement(plugin)));
 
-                _pluginList.Items.Add(new Expander
-                {
-                    Caption = groupedPlugins.Key.ManifestModule.Name,
-                    Content = CreateDataTable(pluginElements)
-                });
+                _pluginList.Items.Add(new Expander(CreateDataTable(pluginElements), groupedPlugins.Key.ManifestModule.Name));
             }
         }
 
@@ -103,7 +98,7 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
 
         private void _viewRawButton_Clicked(object sender, EventArgs e)
         {
-            SelectedPlugin = new RawPlugin();
+            SelectedPlugin = new HexPlugin();
             Result = DialogResult.Ok;
 
             Close();
@@ -157,7 +152,6 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
 
         public ChoosePluginElement(IFilePlugin plugin)
         {
-            ContractAssertions.IsNotNull(plugin, nameof(plugin));
             Plugin = plugin;
         }
     }

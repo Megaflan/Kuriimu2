@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using ImGui.Forms.Localization;
-using Kontract.Interfaces.Plugins.State.Archive;
-using Kontract.Models.FileSystem;
+using Konnect.Contract.DataClasses.FileSystem;
+using Konnect.Contract.Plugin.File.Archive;
 using Kuriimu2.ImGui.Models;
 
 namespace Kuriimu2.ImGui.Interfaces
@@ -16,10 +16,10 @@ namespace Kuriimu2.ImGui.Interfaces
 
     interface IArchiveFormCommunicator : IFormCommunicator
     {
-        Task<bool> Open(IArchiveFileInfo file);
-        Task<bool> Open(IArchiveFileInfo file, Guid pluginId);
-        Task<bool> Close(IArchiveFileInfo file);
+        Task<bool> Open(IArchiveFile file);
+        Task<bool> Open(IArchiveFile file, Guid pluginId);
+        Task<bool> Close(IArchiveFile file);
 
-        void Rename(IArchiveFileInfo file, UPath renamedPath);
+        void Rename(IArchiveFile file, UPath renamedPath);
     }
 }

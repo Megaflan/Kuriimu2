@@ -6,7 +6,7 @@ using ImGui.Forms.Controls.Layouts;
 using ImGui.Forms.Controls.Menu;
 using ImGui.Forms.Models;
 using ImGuiNET;
-using Kuriimu2.ImGui.Controls;
+using Kuriimu2.ImGui.Components;
 using Kuriimu2.ImGui.Resources;
 
 namespace Kuriimu2.ImGui.Forms
@@ -39,6 +39,7 @@ namespace Kuriimu2.ImGui.Forms
         private ProgressBar _progressBar;
         private StatusLabel _statusText;
 
+        private IDictionary<MenuBarCheckBox, string> _localeItems = new Dictionary<MenuBarCheckBox, string>();
         private IDictionary<MenuBarCheckBox, Theme> _themes = new Dictionary<MenuBarCheckBox, Theme>();
 
         private void InitializeComponent()
@@ -64,7 +65,7 @@ namespace Kuriimu2.ImGui.Forms
             _includeDevBuildsButton = new MenuBarCheckBox
             {
                 Text = LocalizationResources.MenuSettingsIncludeDevBuilds,
-                Checked = Settings.Default.IncludeDevBuilds
+                Checked = SettingsResources.IncludeDevBuilds
             };
             _changeLanguageMenu = new MenuBarRadio { Text = LocalizationResources.MenuSettingsChangeLanguage };
             _changeThemeMenu = new MenuBarRadio { Text = LocalizationResources.MenuSettingsChangeTheme };
@@ -159,7 +160,7 @@ namespace Kuriimu2.ImGui.Forms
             Size = new Vector2(1200, 700);
             Style.SetStyle(ImGuiStyleVar.WindowPadding, new Vector2(4));
 
-            MainMenuBar = mainMenuBar;
+            MenuBar = mainMenuBar;
             Content = mainLayout;
 
             #endregion
@@ -174,8 +175,10 @@ namespace Kuriimu2.ImGui.Forms
                 var checkBox = new MenuBarCheckBox
                 {
                     Text = LocalizationResources.Instance.GetLanguageName(locale),
-                    Checked = Settings.Default.Locale == locale
+                    Checked = SettingsResources.Locale == locale
                 };
+
+                _localeItems[checkBox] = locale;
 
                 menu.CheckItems.Add(checkBox);
             }
@@ -183,8 +186,8 @@ namespace Kuriimu2.ImGui.Forms
 
         private void AddThemes(MenuBarRadio menu)
         {
-            var lightCheckBox = new MenuBarCheckBox { Text = LocalizationResources.MenuSettingsChangeThemeLight, Checked = Settings.Default.Theme == Theme.Light.ToString() };
-            var darkCheckBox = new MenuBarCheckBox { Text = LocalizationResources.MenuSettingsChangeThemeDark, Checked = Settings.Default.Theme == Theme.Dark.ToString() };
+            var lightCheckBox = new MenuBarCheckBox { Text = LocalizationResources.MenuSettingsChangeThemeLight, Checked = SettingsResources.Theme == Theme.Light };
+            var darkCheckBox = new MenuBarCheckBox { Text = LocalizationResources.MenuSettingsChangeThemeDark, Checked = SettingsResources.Theme == Theme.Dark };
 
             _themes.Clear();
             _themes[lightCheckBox] = Theme.Light;

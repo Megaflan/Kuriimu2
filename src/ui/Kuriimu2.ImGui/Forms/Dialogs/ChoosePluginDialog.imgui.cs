@@ -2,6 +2,7 @@
 using System.Numerics;
 using ImGui.Forms;
 using ImGui.Forms.Controls;
+using ImGui.Forms.Controls.Base;
 using ImGui.Forms.Controls.Layouts;
 using ImGui.Forms.Controls.Lists;
 using ImGui.Forms.Models;
@@ -12,7 +13,7 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
     partial class ChoosePluginDialog
     {
         private Label _msgLabel;
-        private List _pluginList;
+        private List<Component> _pluginList;
         private CheckBox _showAllPlugins;
 
         private Button _continueButton;
@@ -24,7 +25,7 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
             #region Controls
 
             _msgLabel = new Label();
-            _pluginList = new List { ItemSpacing = 4 };
+            _pluginList = new List<Component> { ItemSpacing = 4 };
             _showAllPlugins = new CheckBox { Text = LocalizationResources.DialogChoosePluginShowAll };
 
             _continueButton = new Button { Width = 70, Text = LocalizationResources.DialogChoosePluginContinue, Enabled = false };
@@ -66,7 +67,7 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
 
             var width = (int)Math.Ceiling(Application.Instance.MainForm.Width * .4f);
             var height = (int)Math.Ceiling(Application.Instance.MainForm.Height * .8f);
-            Size = new Vector2(width, height);
+            Size = new Size(width, height);
 
             Caption = LocalizationResources.DialogChoosePluginCaption;
             Content = mainLayout;

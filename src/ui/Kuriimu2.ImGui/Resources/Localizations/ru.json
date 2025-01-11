@@ -9,8 +9,8 @@
   "Menu.Ciphers": "Шифры",
   "Menu.Compressions": "Сжатия",
   "Menu.Settings": "Настройки",
-  //"Help": "Помощь",
-  //"AboutKuriimu2": "О Kuriimu2",
+  "Menu.Help": "Помощь",
+  "Menu.About.Title": "О Kuriimu2",
 
   // File sub menu
   "Menu.File.Open": "Открыть",

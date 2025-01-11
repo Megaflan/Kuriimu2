@@ -1,15 +1,13 @@
 ﻿using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Numerics;
-using ImGui.Forms;
 using ImGui.Forms.Controls;
 using ImGui.Forms.Controls.Layouts;
-using ImGui.Forms.Controls.Lists;
 using ImGui.Forms.Models;
 using ImGui.Forms.Resources;
-using Kontract.Interfaces.Progress;
-using Kontract.Kanvas.Interfaces;
+using Konnect.Contract.Plugin.File.Image;
+using Konnect.Contract.Progress;
+using Kuriimu2.ImGui.Components;
 using Kuriimu2.ImGui.Resources;
 using ImageResources = Kuriimu2.ImGui.Resources.ImageResources;
 using Size = ImGui.Forms.Models.Size;
@@ -22,6 +20,10 @@ namespace Kuriimu2.ImGui.Forms.Formats
 
         private ImageButton _saveBtn;
         private ImageButton _saveAsBtn;
+        private ImageButton _imgExportBtn;
+        private ImageButton _imgImportBtn;
+        private ImageButton _batchImgExportBtn;
+        private ImageButton _batchImgImportBtn;
 
         private Label _widthTextLbl;
         private Label _heightTextLbl;
@@ -35,28 +37,35 @@ namespace Kuriimu2.ImGui.Forms.Formats
 
         private ZoomablePictureBox _imageBox;
 
-        private ImageList _imgList;
+        private global::ImGui.Forms.Controls.Lists.List<ImageThumbnail> _imgList;
 
         private void InitializeComponent()
         {
             #region Controls
 
-            _widthTextLbl = new Label { Text = LocalizationResources.ImageLabelWidth };
-            _heightTextLbl = new Label { Text = LocalizationResources.ImageLabelHeight };
+            _widthTextLbl = new Label(LocalizationResources.ImageLabelWidth);
+            _heightTextLbl = new Label(LocalizationResources.ImageLabelHeight);
             _widthContentLbl = new Label();
             _heightContentLbl = new Label();
 
-            _formatTextLbl = new Label { Text = LocalizationResources.ImageLabelFormat };
-            _paletteTextLbl = new Label { Text = LocalizationResources.ImageLabelPalette };
+            _formatTextLbl = new Label(LocalizationResources.ImageLabelFormat);
+            _paletteTextLbl = new Label(LocalizationResources.ImageLabelPalette);
             _formatBox = new ComboBox<int>();
             _paletteBox = new ComboBox<int>();
 
             _imageBox = new ZoomablePictureBox { ShowBorder = true };
 
-            _imgList = new ImageList { ItemPadding = 4, ThumbnailSize = new Vector2(90, 60), ShowThumbnailBorder = true };
+            _imgList = new global::ImGui.Forms.Controls.Lists.List<ImageThumbnail>
+            {
+                ItemSpacing = 4
+            };
 
-            _saveBtn = new ImageButton { Image = ImageResources.Save(Style.Theme), ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
-            _saveAsBtn = new ImageButton { Image = ImageResources.SaveAs(Style.Theme), ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
+            _saveBtn = new ImageButton { Image = ImageResources.Save, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
+            _saveAsBtn = new ImageButton { Image = ImageResources.SaveAs, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
+            _imgExportBtn = new ImageButton { Image = ImageResources.ImageExport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
+            _imgImportBtn = new ImageButton { Image = ImageResources.ImageImport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
+            _batchImgExportBtn = new ImageButton { Image = ImageResources.BatchImageExport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
+            _batchImgImportBtn = new ImageButton { Image = ImageResources.BatchImageImport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
 
             #endregion
 
@@ -81,7 +90,13 @@ namespace Kuriimu2.ImGui.Forms.Formats
                                 Items =
                                 {
                                     _saveBtn,
-                                    _saveAsBtn
+                                    _saveAsBtn,
+                                    new Splitter{Length = 26},
+                                    _imgExportBtn,
+                                    _imgImportBtn,
+                                    new Splitter{Length = 26},
+                                    _batchImgExportBtn,
+                                    _batchImgImportBtn
                                 }
                             },
                             _imageBox,
@@ -129,7 +144,7 @@ namespace Kuriimu2.ImGui.Forms.Formats
             };
         }
 
-        private void SetImages(IReadOnlyList<IImageInfo> images, IProgressContext progress)
+        private void SetImages(IReadOnlyList<IImageFile> images, IProgressContext progress)
         {
             _imgList.Items.Clear();
             _imgList.SelectedItem = null;
@@ -140,35 +155,38 @@ namespace Kuriimu2.ImGui.Forms.Formats
             var perPart = 100f / images.Count;
             var perStart = 0f;
 
-            foreach (var img in images)
+            for (var i = 0; i < images.Count; i++)
             {
+                var img = images[i];
                 var scopeProgress = progress.CreateScope(LocalizationResources.ImageProgressDecode, perStart, perStart + perPart);
 
-                _imgList.Items.Add(new FormImageListItem(img, img.GetImage(scopeProgress)));
+                _imgList.Items.Add(new ImageThumbnail(img, i, img.GetImage(scopeProgress)));
 
                 perStart += perPart;
             }
         }
 
-        private void SetSelectedImage(IImageInfo img, IProgressContext progress)
+        private void SetSelectedImage(IImageFile img, IProgressContext progress)
         {
             SetFormats(img);
             SetPaletteFormats(img);
 
-            _imgList.SelectedItem = _imgList.Items.FirstOrDefault(x => ((FormImageListItem)x).ImageInfo == img);
+            _imgList.SelectedItem = _imgList.Items.FirstOrDefault(x => x.ImageFile == img);
             SetImage(img, progress);
 
-            _widthContentLbl.Text = img.ImageSize.Width.ToString();
-            _heightContentLbl.Text = img.ImageSize.Height.ToString();
+            _widthContentLbl.Text = img.ImageInfo.ImageSize.Width.ToString();
+            _heightContentLbl.Text = img.ImageInfo.ImageSize.Height.ToString();
         }
 
-        private void SetImage(IImageInfo img, IProgressContext progress)
+        private void SetImage(IImageFile img, IProgressContext progress)
         {
-            _imageBox.Image = ImageResource.FromBitmap(img.GetImage(progress));
-            _imgList.SelectedItem.Image = ImageResource.FromBitmap(img.GetImage(progress));
+            var image = img.GetImage(progress);
+
+            _imageBox.Image = ImageResource.FromImage(image);
+            _imgList.SelectedItem.SetThumbnail(image);
         }
 
-        private void SetFormats(IImageInfo img)
+        private void SetFormats(IImageFile img)
         {
             _formatBox.Items.Clear();
             _formatBox.SelectedItem = null;
@@ -176,24 +194,24 @@ namespace Kuriimu2.ImGui.Forms.Formats
             if (img == null)
                 return;
 
-            var hasFormats = img.EncodingDefinition.HasColorEncodings || img.EncodingDefinition.HasIndexEncodings;
+            var hasFormats = img.EncodingDefinition.ColorEncodings.Any() || img.EncodingDefinition.IndexEncodings.Any();
             _formatBox.Visible = _formatTextLbl.Visible = hasFormats;
 
             if (!hasFormats)
                 return;
 
-            if (img.EncodingDefinition.HasColorEncodings)
+            if (img.EncodingDefinition.ColorEncodings.Any())
                 foreach (var colorEnc in img.EncodingDefinition.ColorEncodings)
-                    _formatBox.Items.Add(new ComboBoxItem<int>(colorEnc.Key, colorEnc.Value.FormatName));
+                    _formatBox.Items.Add(new DropDownItem<int>(colorEnc.Key, colorEnc.Value.FormatName));
 
-            if (img.EncodingDefinition.HasIndexEncodings)
+            if (img.EncodingDefinition.IndexEncodings.Any())
                 foreach (var indexEnc in img.EncodingDefinition.IndexEncodings)
-                    _formatBox.Items.Add(new ComboBoxItem<int>(indexEnc.Key, indexEnc.Value.IndexEncoding.FormatName));
+                    _formatBox.Items.Add(new DropDownItem<int>(indexEnc.Key, indexEnc.Value.IndexEncoding.FormatName));
 
-            _formatBox.SelectedItem = _formatBox.Items.FirstOrDefault(x => x.Content == img.ImageFormat);
+            _formatBox.SelectedItem = _formatBox.Items.FirstOrDefault(x => x.Content == img.ImageInfo.ImageFormat);
         }
 
-        private void SetPaletteFormats(IImageInfo img)
+        private void SetPaletteFormats(IImageFile img)
         {
             _paletteBox.Items.Clear();
             _paletteBox.SelectedItem = null;
@@ -201,30 +219,17 @@ namespace Kuriimu2.ImGui.Forms.Formats
             if (img == null)
                 return;
 
-            var hasPalettes = img.EncodingDefinition.HasPaletteEncodings;
+            var hasPalettes = img.EncodingDefinition.PaletteEncodings.Any();
             _paletteBox.Visible = _paletteTextLbl.Visible = hasPalettes;
 
             if (!hasPalettes)
                 return;
 
-            if (img.EncodingDefinition.HasPaletteEncodings)
+            if (img.EncodingDefinition.PaletteEncodings.Any())
                 foreach (var paletteEnc in img.EncodingDefinition.PaletteEncodings)
-                    _paletteBox.Items.Add(new ComboBoxItem<int>(paletteEnc.Key, paletteEnc.Value.FormatName));
+                    _paletteBox.Items.Add(new DropDownItem<int>(paletteEnc.Key, paletteEnc.Value.FormatName));
 
-            _paletteBox.SelectedItem = _paletteBox.Items.FirstOrDefault(x => x.Content == img.PaletteFormat);
-        }
-
-        class FormImageListItem : ImageListItem
-        {
-            public IImageInfo ImageInfo { get; }
-
-            public FormImageListItem(IImageInfo img, Bitmap cachedImage = null)
-            {
-                ImageInfo = img;
-
-                Image = ImageResource.FromBitmap(cachedImage ?? img.GetImage());
-                Text = img.Name;
-            }
+            _paletteBox.SelectedItem = _paletteBox.Items.FirstOrDefault(x => x.Content == img.ImageInfo.PaletteFormat);
         }
     }
 }

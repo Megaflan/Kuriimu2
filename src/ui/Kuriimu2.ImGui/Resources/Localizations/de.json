@@ -9,8 +9,8 @@
   "Menu.Ciphers": "Verschlüsselungen",
   "Menu.Compressions": "Kompressionen",
   "Menu.Settings": "Einstellungen",
-  //"Help": "Hilfe",
-  //"AboutKuriimu2": "Über",
+  "Menu.Help": "Hilfe",
+  "Menu.About.Title": "Über",
 
   // File sub menu
   "Menu.File.Open": "Öffnen",

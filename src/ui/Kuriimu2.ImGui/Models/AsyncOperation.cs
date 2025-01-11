@@ -61,12 +61,12 @@ namespace Kuriimu2.ImGui.Models
 
         private void OnStarted()
         {
-            Started?.Invoke(this, new EventArgs());
+            Started?.Invoke(this, EventArgs.Empty);
         }
 
         private void OnFinished()
         {
-            Finished?.Invoke(this, new EventArgs());
+            Finished?.Invoke(this, EventArgs.Empty);
         }
     }
 }

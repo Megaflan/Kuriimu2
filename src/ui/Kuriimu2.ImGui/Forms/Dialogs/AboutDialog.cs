@@ -1,15 +1,13 @@
 ﻿using System;
-using System.Numerics;
+using System.Text.Json;
 using ImGui.Forms;
 using ImGui.Forms.Controls;
 using ImGui.Forms.Controls.Layouts;
-using ImGui.Forms.Controls.Lists;
 using ImGui.Forms.Localization;
 using ImGui.Forms.Models;
 using ImGui.Forms.Modals;
-using Kore.Models.UnsupportedPlugin;
+using Kuriimu2.ImGui.Models;
 using Kuriimu2.ImGui.Resources;
-using Newtonsoft.Json;
 
 namespace Kuriimu2.ImGui.Forms.Dialogs
 {
@@ -28,7 +26,7 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
         {
             var width = (int)Math.Ceiling(Application.Instance.MainForm.Width * .3f);
             var height = (int)Math.Ceiling(Application.Instance.MainForm.Height * .3f);
-            Size = new Vector2(width, height);
+            Size = new Size(width, height);
 
             _titleLabel = new Label { Text = "Kuriimu2" };
             _versionLabel = new Label { Text = GetVersionText() };
@@ -54,8 +52,9 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
         private LocalizedString GetVersionText()
         {
             string manifest = BinaryResources.VersionManifest;
-            dynamic manifestObject = JsonConvert.DeserializeObject(manifest);
-            return LocalizationResources.MenuAboutVersion(manifestObject?.version.ToString() ?? "2.0.0");
+            var manifestObject = JsonSerializer.Deserialize<Manifest>(manifest);
+
+            return LocalizationResources.MenuAboutVersion(manifestObject?.Version);
         }
     }
 }

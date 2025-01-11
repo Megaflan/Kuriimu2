@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using ImGui.Forms.Controls;
+using ImGui.Forms.Controls.Text;
 
 namespace Kuriimu2.ImGui.Models
 {
@@ -75,7 +75,7 @@ namespace Kuriimu2.ImGui.Models
 
         private void OnTextChanged()
         {
-            TextChanged?.Invoke(this, new EventArgs());
+            TextChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 }

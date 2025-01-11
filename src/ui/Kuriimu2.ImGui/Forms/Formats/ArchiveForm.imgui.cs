@@ -1,12 +1,11 @@
 ﻿using System.Numerics;
-using ImGui.Forms;
 using ImGui.Forms.Controls;
 using ImGui.Forms.Controls.Layouts;
 using ImGui.Forms.Controls.Lists;
 using ImGui.Forms.Controls.Menu;
+using ImGui.Forms.Controls.Text;
 using ImGui.Forms.Controls.Tree;
 using ImGui.Forms.Models;
-using Komponent.Models;
 using Kuriimu2.ImGui.Models;
 using Kuriimu2.ImGui.Resources;
 
@@ -88,8 +87,8 @@ namespace Kuriimu2.ImGui.Forms.Formats
                 }
             };
 
-            _saveBtn = new ImageButton { Image = ImageResources.Save(Style.Theme), ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
-            _saveAsBtn = new ImageButton { Image = ImageResources.SaveAs(Style.Theme), ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
+            _saveBtn = new ImageButton { Image = ImageResources.Save, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
+            _saveAsBtn = new ImageButton { Image = ImageResources.SaveAs, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
 
             _searchBox = new TextBox { Placeholder = LocalizationResources.ArchiveSearchPlaceholder };
             _clearButton = new ImageButton { Image = ImageResources.Close };

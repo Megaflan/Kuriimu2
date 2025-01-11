@@ -9,8 +9,8 @@
   "Menu.Ciphers": "密码器",
   "Menu.Compressions": "压缩",
   "Menu.Settings": "设置",
-  //"Help": "帮助",
-  //"AboutKuriimu2": "关于Kuriimu2",
+  "Menu.Help": "帮助",
+  "Menu.About.Title": "关于Kuriimu2",
 
   // File sub menu
   "Menu.File.Open": "打开",

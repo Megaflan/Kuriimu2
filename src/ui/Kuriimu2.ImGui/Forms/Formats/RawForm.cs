@@ -1,6 +1,6 @@
 ﻿using ImGui.Forms.Controls.Base;
 using ImGui.Forms.Models;
-using Kontract.Interfaces.Plugins.State;
+using Konnect.Contract.Plugin.File.Hex;
 using Kuriimu2.ImGui.Interfaces;
 using Kuriimu2.ImGui.Models;
 using Veldrid;
@@ -9,7 +9,7 @@ namespace Kuriimu2.ImGui.Forms.Formats
 {
     partial class RawForm : Component, IKuriimuForm
     {
-        public RawForm(FormInfo<IRawState> formInfo)
+        public RawForm(FormInfo<IHexFilePluginState> formInfo)
         {
             InitializeComponent();
 

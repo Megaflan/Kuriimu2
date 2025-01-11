@@ -1,10 +1,10 @@
 ﻿using System;
 using ImGui.Forms.Controls;
-using Kore.Implementation.Progress;
+using Konnect.Progress;
 
 namespace Kuriimu2.ImGui.Progress
 {
-    class ProgressBarOutput : BaseConcurrentProgressOutput
+    class ProgressBarOutput : ConcurrentProgressOutput
     {
         private readonly ProgressBar _progressBar;
 

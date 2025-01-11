@@ -1,23 +1,23 @@
-﻿using Kontract.Extensions;
-using Kontract.Interfaces.Plugins.State.Archive;
+﻿using Konnect.Contract.Plugin.File.Archive;
+using Konnect.Extensions;
 
 namespace Kuriimu2.ImGui.Models
 {
     class ArchiveFile
     {
-        public IArchiveFileInfo ArchiveFileInfo { get; }
+        public IArchiveFile File { get; }
 
         public string Name { get; }
 
         public long Size { get; }
 
-        public ArchiveFile(IArchiveFileInfo afi)
+        public ArchiveFile(IArchiveFile afi)
         {
-            ArchiveFileInfo = afi;
+            File = afi;
 
             // Set them explicitly instead of a getter, to avoid potential race conditions from the rendering loop accessing this class
-            Name = ArchiveFileInfo.FilePath.GetName();
-            Size = ArchiveFileInfo.FileSize;
+            Name = afi.FilePath.GetName();
+            Size = afi.FileSize;
         }
     }
 }

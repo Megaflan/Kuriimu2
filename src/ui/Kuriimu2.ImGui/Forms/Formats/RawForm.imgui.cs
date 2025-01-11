@@ -1,4 +1,4 @@
-﻿using Kuriimu2.ImGui.Controls;
+﻿using Kuriimu2.ImGui.Components;
 
 namespace Kuriimu2.ImGui.Forms.Formats
 {

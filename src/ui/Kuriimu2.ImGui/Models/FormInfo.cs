@@ -1,13 +1,14 @@
 ﻿using System;
-using Kontract.Interfaces.Managers.Files;
-using Kontract.Interfaces.Plugins.State;
-using Kontract.Interfaces.Progress;
+using Konnect.Contract.Management.Files;
+using Konnect.Contract.Plugin.File;
+using Konnect.Contract.Plugin.File.Archive;
+using Konnect.Contract.Progress;
 using Kuriimu2.ImGui.Interfaces;
 using Serilog;
 
 namespace Kuriimu2.ImGui.Models
 {
-    class FormInfo<TState> where TState : IPluginState
+    class FormInfo<TState> where TState : IFilePluginState
     {
         public IFileState FileState { get; }
 
@@ -33,7 +34,7 @@ namespace Kuriimu2.ImGui.Models
         }
     }
 
-    class ArchiveFormInfo : FormInfo<IArchiveState>
+    class ArchiveFormInfo : FormInfo<IArchiveFilePluginState>
     {
         public new IArchiveFormCommunicator FormCommunicator => (IArchiveFormCommunicator)base.FormCommunicator;
 
