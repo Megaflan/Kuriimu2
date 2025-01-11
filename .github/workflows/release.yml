@@ -7,8 +7,6 @@ on:
 
 jobs:
   build:
-    
-    #timeout-minutes: 15
 
     runs-on: windows-latest
 
