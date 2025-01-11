@@ -6,7 +6,7 @@ using Komponent.DataClasses;
 
 namespace Komponent.IO
 {
-    internal class BinaryTypeWriter
+    public class BinaryTypeWriter
     {
         private static readonly MemberInfoProvider MemberInfoProvider = new();
 

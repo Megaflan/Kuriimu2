@@ -5,7 +5,7 @@ using Komponent.DataClasses;
 
 namespace Komponent.IO
 {
-    internal class BinaryTypeReader
+    public class BinaryTypeReader
     {
         private static readonly MemberInfoProvider MemberInfoProvider = new();
 
