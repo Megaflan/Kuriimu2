@@ -112,7 +112,7 @@ namespace Konnect.FileSystem
             // Move files
             foreach (var file in element.Item2)
             {
-                ArchiveState.AttemptRename(file, destPath / file.FilePath.GetName());
+                ArchiveState.AttemptRenameFile(file, destPath / file.FilePath.GetName());
                 _directoryDictionary[destPath].Item2.Add(file);
             }
         }
@@ -229,7 +229,7 @@ namespace Konnect.FileSystem
             GetOrCreateDispatcher().RaiseDeleted(srcPath);
 
             // Rename file
-            ArchiveState.AttemptRename(file, destPath);
+            ArchiveState.AttemptRenameFile(file, destPath);
 
             GetOrCreateDispatcher().RaiseRenamed(destPath, srcPath);
 

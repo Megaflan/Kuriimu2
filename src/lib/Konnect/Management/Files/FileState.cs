@@ -109,8 +109,9 @@ namespace Konnect.Management.Files
             switch (PluginState)
             {
                 case IArchiveFilePluginState archiveState:
-                    foreach (IArchiveFile file in archiveState.Files)
-                        file.Dispose();
+                    if (archiveState.Files?.Count > 0)
+                        foreach (IArchiveFile file in archiveState.Files)
+                            file.Dispose();
                     break;
             }
 

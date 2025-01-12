@@ -10,8 +10,8 @@ namespace Konnect.Contract.Plugin.File.Archive
         /// <summary>
         /// Rename a given file.
         /// </summary>
-        /// <param name="afi">The file to rename.</param>
+        /// <param name="file">The file to rename.</param>
         /// <param name="path">The new path of the file.</param>
-        void Rename(IArchiveFile afi, UPath path);
+        void RenameFile(IArchiveFile file, UPath path);
     }
 }

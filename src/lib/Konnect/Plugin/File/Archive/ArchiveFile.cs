@@ -28,7 +28,7 @@ namespace Konnect.Plugin.File.Archive
         /// <inheritdoc />
         public UPath FilePath
         {
-            get => _fileInfo.FilePath;
+            get => _fileInfo.FilePath.ToAbsolute();
             set
             {
                 _fileInfo.FilePath = value.ToAbsolute();

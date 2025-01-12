@@ -24,7 +24,7 @@ namespace Konnect.Contract.Plugin.File.Archive
         #region Optional feature casting defaults
 
         void AttemptReplaceFile(IArchiveFile afi, Stream fileData) => ((IReplaceFiles)this).ReplaceFile(afi, fileData);
-        void AttemptRename(IArchiveFile afi, UPath path) => ((IRenameFiles)this).Rename(afi, path);
+        void AttemptRenameFile(IArchiveFile afi, UPath path) => ((IRenameFiles)this).RenameFile(afi, path);
         void AttemptRemoveFile(IArchiveFile afi) => ((IRemoveFiles)this).RemoveFile(afi);
         void AttemptRemoveAll() => ((IRemoveFiles)this).RemoveAll();
         IArchiveFile AttemptAddFile(Stream fileData, UPath filePath) => ((IAddFiles)this).AddFile(fileData, filePath);

@@ -8,8 +8,8 @@
         /// <summary>
         /// Removes a single file from the archive state.
         /// </summary>
-        /// <param name="afi">The file to remove.</param>
-        void RemoveFile(IArchiveFile afi);
+        /// <param name="file">The file to remove.</param>
+        void RemoveFile(IArchiveFile file);
 
         /// <summary>
         /// Removes all files from the archive state.

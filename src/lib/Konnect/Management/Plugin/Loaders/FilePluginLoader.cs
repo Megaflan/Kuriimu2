@@ -15,7 +15,7 @@ namespace Konnect.Management.Plugin.Loaders
 
         public FilePluginLoader(params string[] pluginPaths)
         {
-            if (TryLoadPlugins<IFilePlugin>(pluginPaths, out var plugins, out var errors))
+            if (!TryLoadPlugins<IFilePlugin>(pluginPaths, out var plugins, out var errors))
             {
                 errors = new List<PluginLoadError>();
                 plugins = new List<IFilePlugin>();
@@ -27,7 +27,7 @@ namespace Konnect.Management.Plugin.Loaders
 
         public FilePluginLoader(params Assembly[] pluginAssemblies)
         {
-            if (TryLoadPlugins<IFilePlugin>(pluginAssemblies, out var plugins, out var errors))
+            if (!TryLoadPlugins<IFilePlugin>(pluginAssemblies, out var plugins, out var errors))
             {
                 errors = new List<PluginLoadError>();
                 plugins = new List<IFilePlugin>();

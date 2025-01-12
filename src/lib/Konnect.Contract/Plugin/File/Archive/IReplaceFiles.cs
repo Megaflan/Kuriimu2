@@ -8,8 +8,8 @@
         /// <summary>
         /// Replaces file data in a given file.
         /// </summary>
-        /// <param name="afi">The file to replace data in.</param>
+        /// <param name="file">The file to replace data in.</param>
         /// <param name="fileData">The new file data to replace the original file with.</param>
-        void ReplaceFile(IArchiveFile afi, Stream fileData);
+        void ReplaceFile(IArchiveFile file, Stream fileData);
     }
 }
