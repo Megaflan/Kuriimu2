@@ -5,7 +5,7 @@ namespace Konnect.Contract.Plugin.File.Font
     /// <summary>
     /// This interface allows the font adapter to add new characters through the UI.
     /// </summary>
-    public interface IAddCharacters: IFontFilePluginState
+    public interface IAddCharacters : IFontFilePluginState
     {
         /// <summary>
         /// Creates a new character and allows the plugin to provide its derived type.

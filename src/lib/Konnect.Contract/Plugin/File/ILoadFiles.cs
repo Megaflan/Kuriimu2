@@ -7,7 +7,7 @@ namespace Konnect.Contract.Plugin.File
     /// <summary>
     /// Marks the plugin as loadable and exposes methods to load a file into the state.
     /// </summary>
-    public interface ILoadFiles
+    public interface ILoadFiles : IFilePluginState
     {
         /// <summary>
         /// Load the file into the state.

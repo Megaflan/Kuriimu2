@@ -39,21 +39,21 @@ namespace Konnect.Contract.Plugin.File.Image
         /// </summary>
         /// <param name="progress">The progress for this action.</param>
         /// <returns>The decoded image.</returns>
-        Image<Rgba32> GetImage(IProgressContext progress = null);
+        Image<Rgba32> GetImage(IProgressContext? progress = null);
 
         /// <summary>
         /// Sets the image of the set <see cref="ImageInfo"/>.
         /// </summary>
         /// <param name="image">The image to encode and set.</param>
         /// <param name="progress">The progress for this action.</param>
-        void SetImage(Image<Rgba32> image, IProgressContext progress = null);
+        void SetImage(Image<Rgba32> image, IProgressContext? progress = null);
 
         /// <summary>
         /// Change the image's color encoding.
         /// </summary>
         /// <param name="imageFormat">The new image format.</param>
         /// <param name="progress">The progress for this action.</param>
-        void TranscodeImage(int imageFormat, IProgressContext progress = null);
+        void TranscodeImage(int imageFormat, IProgressContext? progress = null);
 
         /// <summary>
         /// Gets the palette of the set <see cref="ImageInfo"/>.
@@ -61,7 +61,7 @@ namespace Konnect.Contract.Plugin.File.Image
         /// <param name="progress">The progress for this action.</param>
         /// <returns>The decoded palette.</returns>
         /// <remarks>Throws if the image does not have a palette.</remarks>
-        IList<Rgba32> GetPalette(IProgressContext progress = null);
+        IList<Rgba32> GetPalette(IProgressContext? progress = null);
 
         /// <summary>
         /// Sets the palette of the set <see cref="ImageInfo"/>.
@@ -69,7 +69,7 @@ namespace Konnect.Contract.Plugin.File.Image
         /// <param name="palette">The palette to encode and set.</param>
         /// <param name="progress">The progress for this action.</param>
         /// <remarks>Throws if the image does not have a palette.</remarks>
-        void SetPalette(IList<Rgba32> palette, IProgressContext progress = null);
+        void SetPalette(IList<Rgba32> palette, IProgressContext? progress = null);
 
         /// <summary>
         /// Change the palette's color encoding.
@@ -77,7 +77,7 @@ namespace Konnect.Contract.Plugin.File.Image
         /// <param name="paletteFormat">The new palette format.</param>
         /// <param name="progress">The progress for this action.</param>
         /// <remarks>Throws if the image does not have a palette.</remarks>
-        void TranscodePalette(int paletteFormat, IProgressContext progress = null);
+        void TranscodePalette(int paletteFormat, IProgressContext? progress = null);
 
         /// <summary>
         /// Sets a color at any index in the palette. 

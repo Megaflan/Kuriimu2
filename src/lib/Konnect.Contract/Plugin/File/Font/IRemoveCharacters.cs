@@ -5,7 +5,7 @@ namespace Konnect.Contract.Plugin.File.Font
     /// <summary>
     /// This interface allows the font adapter to delete characters through the UI.
     /// </summary>
-    public interface IRemoveCharacters: IFontFilePluginState
+    public interface IRemoveCharacters : IFontFilePluginState
     {
         /// <summary>
         /// Deletes an character and allows the plugin to perform any required deletion steps.

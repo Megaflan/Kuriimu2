@@ -66,7 +66,7 @@ namespace Konnect.Plugin.File.Archive
         }
 
         /// <inheritdoc />
-        public virtual Task<Stream> GetFileData(ITemporaryStreamManager? temporaryStreamManager, IProgressContext? progress)
+        public virtual Task<Stream> GetFileData(ITemporaryStreamManager? temporaryStreamManager = null, IProgressContext? progress = null)
         {
             return UsesCompression ? Task.Run(GetDecompressedStream) : Task.FromResult(GetBaseStream());
         }
@@ -95,9 +95,10 @@ namespace Konnect.Plugin.File.Archive
         /// Save the file data to an output stream.
         /// </summary>
         /// <param name="output">The output to write the file data to.</param>
+        /// <param name="compress">If the file should be compressed, if compression is set.</param>
         /// <param name="progress">The context to report progress to.</param>
         /// <returns>The size of the file written.</returns>
-        public long WriteFileData(Stream output, bool compress, IProgressContext? progress)
+        public long WriteFileData(Stream output, bool compress, IProgressContext? progress = null)
         {
             var dataToCopy = GetFinalStream();
 

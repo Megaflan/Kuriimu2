@@ -67,7 +67,7 @@ namespace Konnect.Plugin.File.Image
 
         #endregion
 
-        protected virtual Image<Rgba32> GetDecodedImage(IProgressContext progress)
+        protected virtual Image<Rgba32> GetDecodedImage(IProgressContext? progress = null)
         {
             IImageTranscoder transcoder;
 
@@ -88,7 +88,7 @@ namespace Konnect.Plugin.File.Image
             return transcoder.Decode(ImageInfo.ImageData, ImageInfo.ImageSize);
         }
 
-        protected virtual (byte[], byte[]) GetEncodedImage(Image<Rgba32> image, int imageFormat, int paletteFormat, IProgressContext progress)
+        protected virtual (byte[], byte[]) GetEncodedImage(Image<Rgba32> image, int imageFormat, int paletteFormat, IProgressContext? progress = null)
         {
             IImageTranscoder transcoder;
 
@@ -111,7 +111,7 @@ namespace Konnect.Plugin.File.Image
             return transcoder.Encode(image);
         }
 
-        protected virtual byte[] GetEncodedMipMap(Image<Rgba32> image, int imageFormat, IList<Rgba32> palette, IProgressContext progress)
+        protected virtual byte[] GetEncodedMipMap(Image<Rgba32> image, int imageFormat, IList<Rgba32> palette, IProgressContext? progress = null)
         {
             IImageTranscoder transcoder;
 
@@ -156,13 +156,13 @@ namespace Konnect.Plugin.File.Image
         #region Image methods
 
         /// <inheritdoc />
-        public Image<Rgba32> GetImage(IProgressContext progress = null)
+        public Image<Rgba32> GetImage(IProgressContext? progress = null)
         {
             return DecodeImage(progress);
         }
 
         /// <inheritdoc />
-        public void SetImage(Image<Rgba32> image, IProgressContext progress = null)
+        public void SetImage(Image<Rgba32> image, IProgressContext? progress = null)
         {
             // Check for locking
             if (IsImageLocked && (ImageInfo.ImageSize.Width != image.Width || ImageInfo.ImageSize.Height != image.Height))
@@ -184,7 +184,7 @@ namespace Konnect.Plugin.File.Image
         }
 
         /// <inheritdoc />
-        public void TranscodeImage(int imageFormat, IProgressContext progress = null)
+        public void TranscodeImage(int imageFormat, IProgressContext? progress = null)
         {
             if (IsImageLocked)
                 throw new InvalidOperationException("Image cannot be transcoded to another format.");
@@ -227,7 +227,7 @@ namespace Konnect.Plugin.File.Image
         #region Palette methods
 
         /// <inheritdoc />
-        public IList<Rgba32> GetPalette(IProgressContext progress = null)
+        public IList<Rgba32> GetPalette(IProgressContext? progress = null)
         {
             if (!IsIndexed)
                 throw new InvalidOperationException("Image is not indexed.");
@@ -236,7 +236,7 @@ namespace Konnect.Plugin.File.Image
         }
 
         /// <inheritdoc />
-        public void SetPalette(IList<Rgba32> palette, IProgressContext progress = null)
+        public void SetPalette(IList<Rgba32> palette, IProgressContext? progress = null)
         {
             if (!IsIndexed)
                 throw new InvalidOperationException("Image is not indexed.");
@@ -254,7 +254,7 @@ namespace Konnect.Plugin.File.Image
         }
 
         /// <inheritdoc />
-        public void TranscodePalette(int paletteFormat, IProgressContext progress = null)
+        public void TranscodePalette(int paletteFormat, IProgressContext? progress = null)
         {
             if (!IsIndexed)
                 throw new InvalidOperationException("Image is not indexed.");
@@ -283,7 +283,7 @@ namespace Konnect.Plugin.File.Image
 
         #region Decode methods
 
-        private Image<Rgba32> DecodeImage(IProgressContext progress = null)
+        private Image<Rgba32> DecodeImage(IProgressContext? progress = null)
         {
             if (_decodedImage != null)
                 return _decodedImage;
@@ -300,7 +300,7 @@ namespace Konnect.Plugin.File.Image
         /// </summary>
         /// <param name="context"></param>
         /// <returns>Either buffered palette or decoded palette.</returns>
-        private IList<Rgba32> DecodePalette(IProgressContext context = null)
+        private IList<Rgba32> DecodePalette(IProgressContext? context = null)
         {
             if (_decodedPalette != null)
                 return _decodedPalette;
@@ -314,7 +314,7 @@ namespace Konnect.Plugin.File.Image
         /// <param name="paletteData">Palette data to decode.</param>
         /// <param name="context"></param>
         /// <returns>Decoded palette.</returns>
-        private IList<Rgba32> DecodePalette(byte[] paletteData, IProgressContext context = null)
+        private IList<Rgba32> DecodePalette(byte[] paletteData, IProgressContext? context = null)
         {
             var paletteEncoding = EncodingDefinition.GetPaletteEncoding(ImageInfo.PaletteFormat);
             return paletteEncoding
@@ -330,7 +330,7 @@ namespace Konnect.Plugin.File.Image
 
         #region Encode methods
 
-        private (IList<byte[]> imageData, byte[] paletteData) EncodeImage(Image<Rgba32> image, int imageFormat, int paletteFormat = -1, IProgressContext progress = null)
+        private (IList<byte[]> imageData, byte[] paletteData) EncodeImage(Image<Rgba32> image, int imageFormat, int paletteFormat = -1, IProgressContext? progress = null)
         {
             // Transcode image
             byte[] mainImageData = null;
@@ -377,7 +377,7 @@ namespace Konnect.Plugin.File.Image
 
         #endregion
 
-        private void TranscodeInternal(int imageFormat, int paletteFormat, bool checkFormatEquality, IProgressContext progress = null)
+        private void TranscodeInternal(int imageFormat, int paletteFormat, bool checkFormatEquality, IProgressContext? progress = null)
         {
             AssertImageFormatExists(imageFormat);
             if (IsIndexEncoding(imageFormat))

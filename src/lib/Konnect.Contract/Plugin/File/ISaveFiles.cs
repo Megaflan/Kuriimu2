@@ -7,7 +7,7 @@ namespace Konnect.Contract.Plugin.File
     /// <summary>
     /// Marks the plugin state as saveable and exposes methods to save the current state.
     /// </summary>
-    public interface ISaveFiles
+    public interface ISaveFiles : IFilePluginState
     {
         /// <summary>
         /// Determine if the state got modified.
