@@ -12,7 +12,12 @@ namespace Konnect.Contract.DataClasses.Plugin.File.Image
         /// <summary>
         /// The name of this image.
         /// </summary>
-        public string? Name { get; init; } = null;
+        public string? Name { get; init; }
+
+        /// <summary>
+        /// The bits per pixel used in the data.
+        /// </summary>
+        public required int BitDepth { get; set; }
 
         /// <summary>
         /// The <see cref="Size"/> of this image.

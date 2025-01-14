@@ -100,7 +100,7 @@ namespace Konnect.Plugin.File.Archive
         /// <returns>The size of the file written.</returns>
         public long WriteFileData(Stream output, bool compress, IProgressContext? progress = null)
         {
-            var dataToCopy = GetFinalStream();
+            var dataToCopy = GetFinalStream(compress);
 
             progress?.ReportProgress($"Writing file '{FilePath}'.", 0, 1);
 

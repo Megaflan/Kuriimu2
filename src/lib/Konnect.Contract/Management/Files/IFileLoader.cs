@@ -13,7 +13,7 @@ namespace Konnect.Contract.Management.Files
         /// <summary>
         /// An event to allow for manual selection by the user.
         /// </summary>
-        event EventHandler<ManualSelectionEventArgs> OnManualSelection;
+        event ManualSelectionDelegate? OnManualSelection;
 
         /// <summary>
         /// Loads any file from a given file system.

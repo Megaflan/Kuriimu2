@@ -6,12 +6,14 @@ using Serilog;
 
 namespace Konnect.Contract.Management.Files
 {
+    public delegate Task ManualSelectionDelegate(ManualSelectionEventArgs e);
+
     public interface IFileManager : IPluginFileManager
     {
         /// <summary>
         /// An event to allow for manual selection by the user.
         /// </summary>
-        event EventHandler<ManualSelectionEventArgs> OnManualSelection;
+        event ManualSelectionDelegate? OnManualSelection;
 
         /// <summary>
         /// Declares if manual plugin selection on Load is allowed.

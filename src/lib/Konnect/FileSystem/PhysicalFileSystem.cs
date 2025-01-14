@@ -306,7 +306,11 @@ namespace Konnect.FileSystem
                 throw new UnauthorizedAccessException($"The access to `{path}` is denied");
             }
 
-            var file = File.Open(ConvertPathToInternal(path), mode, access, share);
+            string convertedPath = ConvertPathToInternal(path);
+            if (mode is FileMode.Create or FileMode.CreateNew or FileMode.OpenOrCreate)
+                CreateDirectoryImpl(path.GetDirectory());
+
+            Stream file = File.Open(convertedPath, mode, access, share);
             StreamManager.Register(file);
 
             GetOrCreateDispatcher().RaiseOpened(path);

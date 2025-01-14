@@ -1,9 +1,11 @@
 ﻿using Kanvas;
+using Kanvas.Contract.Encoding;
 using Konnect.Contract.DataClasses.Plugin.File.Image;
 using Konnect.Contract.Plugin.File.Image;
 using Konnect.Contract.Progress;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Text;
 
 namespace Konnect.Plugin.File.Image
 {
@@ -19,14 +21,17 @@ namespace Konnect.Plugin.File.Image
 
         public StaticImageFile(Image<Rgba32> image)
         {
+            IColorEncoding encoding = ImageFormats.Rgba8888();
+
             var encodingDefinition = new EncodingDefinition();
-            encodingDefinition.AddColorEncoding(0, ImageFormats.Rgba8888());
+            encodingDefinition.AddColorEncoding(0, encoding);
 
             _image = image;
 
             EncodingDefinition = encodingDefinition;
             ImageInfo = new ImageFileInfo
             {
+                BitDepth = encoding.BitDepth,
                 ImageSize = image.Size,
                 ImageData = Array.Empty<byte>(),
                 ImageFormat = -1
@@ -35,8 +40,10 @@ namespace Konnect.Plugin.File.Image
 
         public StaticImageFile(Image<Rgba32> image, string name) : this(image)
         {
+            IColorEncoding encoding = ImageFormats.Rgba8888();
+
             var encodingDefinition = new EncodingDefinition();
-            encodingDefinition.AddColorEncoding(0, ImageFormats.Rgba8888());
+            encodingDefinition.AddColorEncoding(0, encoding);
 
             _image = image;
 
@@ -44,6 +51,7 @@ namespace Konnect.Plugin.File.Image
             ImageInfo = new ImageFileInfo
             {
                 Name = name,
+                BitDepth = encoding.BitDepth,
                 ImageSize = image.Size,
                 ImageData = Array.Empty<byte>(),
                 ImageFormat = -1

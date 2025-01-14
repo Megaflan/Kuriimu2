@@ -46,7 +46,7 @@ namespace Konnect.Management.Files
         private readonly object _closeLock = new object();
 
         /// <inheritdoc />
-        public event EventHandler<ManualSelectionEventArgs> OnManualSelection;
+        public event ManualSelectionDelegate? OnManualSelection;
 
         /// <inheritdoc />
         public bool AllowManualSelection { get; set; } = true;
@@ -811,9 +811,12 @@ namespace Konnect.Management.Files
             _streamMonitor?.Dispose();
         }
 
-        private void FileLoader_OnManualSelection(object sender, ManualSelectionEventArgs e)
+        private async Task FileLoader_OnManualSelection(ManualSelectionEventArgs e)
         {
-            OnManualSelection?.Invoke(sender, e);
+            if (OnManualSelection == null)
+                return;
+
+            await OnManualSelection.Invoke(e);
         }
 
         private void SetLogger(ILogger logger)

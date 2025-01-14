@@ -20,11 +20,6 @@ namespace Konnect.Contract.Plugin.File.Image
         ImageFileInfo ImageInfo { get; }
 
         /// <summary>
-        /// The bit depth of the current image encoding used.
-        /// </summary>
-        int BitDepth { get; }
-
-        /// <summary>
         /// If the image is encoded with an <see cref="IIndexEncoding"/>.
         /// </summary>
         bool IsIndexed { get; }

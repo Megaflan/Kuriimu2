@@ -1,6 +1,7 @@
 ﻿using Kanvas.Configuration;
 using Kanvas.Contract;
 using Kanvas.Contract.DataClasses;
+using Kanvas.Contract.Encoding;
 using Konnect.Contract.DataClasses.Plugin.File.Image;
 using Konnect.Contract.Plugin.File.Image;
 using Konnect.Contract.Progress;
@@ -26,11 +27,6 @@ namespace Konnect.Plugin.File.Image
 
         /// <inheritdoc />
         public ImageFileInfo ImageInfo { get; }
-
-        /// <inheritdoc />
-        public int BitDepth => EncodingDefinition.ContainsColorEncoding(ImageInfo.ImageFormat) ?
-            EncodingDefinition.GetColorEncoding(ImageInfo.ImageFormat).BitDepth :
-            EncodingDefinition.GetIndexEncoding(ImageInfo.ImageFormat).IndexEncoding.BitDepth;
 
         /// <inheritdoc />
         public bool IsIndexed => IsIndexEncoding(ImageInfo.ImageFormat);
@@ -92,19 +88,27 @@ namespace Konnect.Plugin.File.Image
         {
             IImageTranscoder transcoder;
 
-            if (IsIndexEncoding(imageFormat))
+            if (IsIndexed)
             {
                 var indexEncoding = EncodingDefinition.GetIndexEncoding(imageFormat).IndexEncoding;
+                var paletteEncoding = EncodingDefinition.GetPaletteEncoding(paletteFormat);
+
+                ImageInfo.BitDepth = indexEncoding.BitDepth;
+
                 transcoder = CreateImageConfiguration(imageFormat, paletteFormat)
                     .ConfigureQuantization(options => options.WithColorCount(indexEncoding.MaxColors))
                     .Transcode.With(indexEncoding)
-                    .TranscodePalette.With(EncodingDefinition.GetPaletteEncoding(imageFormat))
+                    .TranscodePalette.With(paletteEncoding)
                     .Build();
             }
             else
             {
+                var encoding = EncodingDefinition.GetColorEncoding(imageFormat);
+
+                ImageInfo.BitDepth = encoding.BitDepth;
+
                 transcoder = CreateImageConfiguration(imageFormat, paletteFormat)
-                    .Transcode.With(EncodingDefinition.GetColorEncoding(imageFormat))
+                    .Transcode.With(encoding)
                     .Build();
             }
 
@@ -115,7 +119,7 @@ namespace Konnect.Plugin.File.Image
         {
             IImageTranscoder transcoder;
 
-            if (IsIndexEncoding(imageFormat))
+            if (IsIndexed)
             {
                 var indexEncoding = EncodingDefinition.GetIndexEncoding(imageFormat).IndexEncoding;
                 transcoder = CreateImageConfiguration(ImageInfo.ImageFormat, ImageInfo.PaletteFormat)
@@ -145,12 +149,32 @@ namespace Konnect.Plugin.File.Image
             if (ImageInfo.RemapPixels != null)
                 config.RemapPixels.With(ImageInfo.RemapPixels);
 
-            if (IsIndexEncoding(imageFormat) && EncodingDefinition.ContainsPaletteShader(paletteFormat))
-                config.ShadeColors.With(() => EncodingDefinition.GetPaletteShader(paletteFormat));
-            if (!IsIndexEncoding(imageFormat) && EncodingDefinition.ContainsColorShader(imageFormat))
-                config.ShadeColors.With(() => EncodingDefinition.GetColorShader(imageFormat));
+            if (IsIndexed)
+            {
+                if (EncodingDefinition.ContainsPaletteShader(paletteFormat))
+                    config.ShadeColors.With(() => EncodingDefinition.GetPaletteShader(paletteFormat));
+
+                var indexEncoding = EncodingDefinition.GetIndexEncoding(imageFormat).IndexEncoding;
+                config.Transcode.With(indexEncoding);
+            }
+            else
+            {
+                if (EncodingDefinition.ContainsColorShader(imageFormat))
+                    config.ShadeColors.With(() => EncodingDefinition.GetColorShader(imageFormat));
+
+                var encoding = EncodingDefinition.GetColorEncoding(imageFormat);
+                config.Transcode.With(encoding);
+            }
 
             return config;
+        }
+
+        private IEncodingInfo GetEncodingInfo(int imageFormat)
+        {
+            if (IsIndexed)
+                return EncodingDefinition.GetIndexEncoding(imageFormat).IndexEncoding;
+
+            return EncodingDefinition.GetColorEncoding(imageFormat);
         }
 
         #region Image methods
@@ -175,6 +199,7 @@ namespace Konnect.Plugin.File.Image
 
             var (imageData, paletteData) = EncodeImage(image, ImageInfo.ImageFormat, ImageInfo.PaletteFormat, progress);
 
+            ImageInfo.BitDepth = GetEncodingInfo(ImageInfo.ImageFormat).BitDepth;
             ImageInfo.ImageData = imageData.FirstOrDefault();
             ImageInfo.PaletteData = paletteData;
             ImageInfo.MipMapData = imageData.Skip(1).ToArray();
@@ -399,6 +424,7 @@ namespace Konnect.Plugin.File.Image
             var (imageData, paletteData) = EncodeImage(decodedImage, imageFormat, paletteFormat, progress);
 
             // Set remaining image info properties
+            ImageInfo.BitDepth = GetEncodingInfo(ImageInfo.ImageFormat).BitDepth;
             ImageInfo.ImageData = imageData.FirstOrDefault();
             ImageInfo.MipMapData = imageData.Skip(1).ToArray();
             ImageInfo.PaletteData = IsIndexEncoding(imageFormat) ? paletteData : null;

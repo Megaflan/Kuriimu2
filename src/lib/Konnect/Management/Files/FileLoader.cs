@@ -7,7 +7,6 @@ using Konnect.Contract.FileSystem;
 using Konnect.Contract.Management.Files;
 using Konnect.Contract.Management.Plugin;
 using Konnect.Contract.Management.Streams;
-using Konnect.Contract.Plugin;
 using Konnect.Contract.Plugin.File;
 
 namespace Konnect.Management.Files
@@ -19,7 +18,7 @@ namespace Konnect.Management.Files
     {
         private readonly IPluginManager _pluginManager;
 
-        public event EventHandler<ManualSelectionEventArgs> OnManualSelection;
+        public event ManualSelectionDelegate? OnManualSelection;
 
         /// <summary>
         /// Creates a new instance of <see cref="FileLoader"/>.
@@ -89,7 +88,7 @@ namespace Konnect.Management.Files
         /// <param name="filePath">The path of the file to identify.</param>
         /// <param name="loadInfo">The context for the load operation.</param>
         /// <returns>The identified <see cref="IFilePlugin"/>.</returns>
-        private async Task<IFilePlugin> IdentifyPluginAsync(IFileSystem fileSystem, UPath filePath, LoadFileOptions loadInfo)
+        private async Task<IFilePlugin?> IdentifyPluginAsync(IFileSystem fileSystem, UPath filePath, LoadFileOptions loadInfo)
         {
             // 1. Get all plugins that support identification
             var identifiablePlugins = _pluginManager.GetPlugins<IFilePlugin>().Where(p => p.CanIdentifyFiles).Cast<IIdentifyFiles>();
@@ -118,10 +117,13 @@ namespace Konnect.Management.Files
                 return matchedPlugins.First();
 
             if (matchedPlugins.Count > 1)
-                return GetManualSelection(allPlugins, matchedPlugins, SelectionStatus.MultipleMatches);
+                return await GetManualSelection(allPlugins, matchedPlugins, SelectionStatus.MultipleMatches);
 
             // 5. If no plugin could identify the file, get manual feedback on all plugins that don't implement IIdentifyFiles
-            return loadInfo.AllowManualSelection ? GetManualSelection(allPlugins, allPlugins.Where(x => !x.CanIdentifyFiles), SelectionStatus.NonIdentifiable) : null;
+            if (loadInfo.AllowManualSelection)
+                return await GetManualSelection(allPlugins, allPlugins.Where(x => !x.CanIdentifyFiles), SelectionStatus.NonIdentifiable);
+
+            return null;
         }
 
         /// <summary>
@@ -151,11 +153,14 @@ namespace Konnect.Management.Files
         /// Select a plugin manually.
         /// </summary>
         /// <returns>The manually selected plugin.</returns>
-        private IFilePlugin GetManualSelection(IEnumerable<IFilePlugin> allFilePlugins, IEnumerable<IFilePlugin> filteredFilePlugins, SelectionStatus status)
+        private async Task<IFilePlugin?> GetManualSelection(IEnumerable<IFilePlugin> allFilePlugins, IEnumerable<IFilePlugin> filteredFilePlugins, SelectionStatus status)
         {
+            if (OnManualSelection == null)
+                return null;
+
             // 1. Request manual selection by the user
             var selectionArgs = new ManualSelectionEventArgs(allFilePlugins, filteredFilePlugins, status);
-            OnManualSelection?.Invoke(this, selectionArgs);
+            await OnManualSelection.Invoke(selectionArgs);
 
             return selectionArgs.Result;
         }
