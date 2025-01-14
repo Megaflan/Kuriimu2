@@ -28,13 +28,13 @@ namespace Kanvas.Configuration
 
         public ISizePaddingConfigurationBuilder ToPowerOfTwo(int steps = 1)
         {
-            _setDelegate.Invoke(value => 2 << (int)Math.Log(value - 1, 2) << (steps - 1));
+            _setDelegate.Invoke(value => SizePadding.MultipleOfTwo(value, steps));
             return _parent;
         }
 
         public ISizePaddingConfigurationBuilder ToMultiple(int multiple)
         {
-            _setDelegate.Invoke(value => (value + (multiple - 1)) / multiple * multiple);
+            _setDelegate.Invoke(value => SizePadding.Multiple(value, multiple));
             return _parent;
         }
     }
