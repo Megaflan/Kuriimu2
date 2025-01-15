@@ -27,7 +27,7 @@ namespace Konnect.Management.Dialog
         public async Task<bool> ShowDialog(params DialogField[] fields)
         {
             // If no dialog Manager is given and not enough predefined options are available.
-            if (_options.Count - _optionIndex < fields.Length)
+            if (_dialogManager == null && _options.Count - _optionIndex < fields.Length)
                 throw new InvalidOperationException("Not enough predefined dialog options.");
 
             // Collect predefined options for each field
