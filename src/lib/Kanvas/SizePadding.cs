@@ -3,13 +3,13 @@
     public static class SizePadding
     {
         /// <summary>
-        /// Rounds up a given value to the next multiple of two.
+        /// Rounds up a given value to the next power of two.
         /// </summary>
         /// <param name="value">The value to round up.</param>
         /// <param name="steps">The amount of power of two's to round up to.</param>
         /// <returns>The rounded up value.</returns>
         /// <remarks>Eg. 34 with 1 step is 64, 121 with 2 steps is 256.</remarks>
-        public static int MultipleOfTwo(int value, int steps)
+        public static int PowerOfTwo(int value, int steps)
         {
             return 2 << (int)Math.Log(value - 1, 2) << (steps - 1);
         }

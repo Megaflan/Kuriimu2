@@ -28,7 +28,7 @@ namespace Kanvas.Configuration
 
         public ISizePaddingConfigurationBuilder ToPowerOfTwo(int steps = 1)
         {
-            _setDelegate.Invoke(value => SizePadding.MultipleOfTwo(value, steps));
+            _setDelegate.Invoke(value => SizePadding.PowerOfTwo(value, steps));
             return _parent;
         }
 
