@@ -7,10 +7,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Kanvas" Version="2.1.5" />
-    <PackageReference Include="Kompression" Version="2.1.1" />
+    <PackageReference Include="Kanvas" Version="2.1.6" />
     <PackageReference Include="Serilog" Version="4.2.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Kompression.Contract\Kompression.Contract.csproj" />
+    <ProjectReference Include="..\Kompression\Kompression.csproj" />
   </ItemGroup>
 
 </Project>
