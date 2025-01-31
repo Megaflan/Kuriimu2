@@ -1,8 +1,6 @@
-﻿using System;
-using System.Buffers.Binary;
-using System.IO;
-using Komponent.IO.Streams;
-using Kontract.Kompression.Interfaces.Configuration;
+﻿using System.Buffers.Binary;
+using Komponent.Streams;
+using Kompression.Contract;
 
 namespace plugin_level5.Compression
 {
@@ -26,7 +24,7 @@ namespace plugin_level5.Compression
             return (Level5CompressionMethod)(BinaryPrimitives.ReadUInt32LittleEndian(sizeMethodBuffer) & 0x7);
         }
 
-        public static IKompressionConfiguration GetKompressionConfiguration(Level5CompressionMethod method)
+        public static ICompression? GetCompression(Level5CompressionMethod method)
         {
             switch (method)
             {
@@ -34,19 +32,19 @@ namespace plugin_level5.Compression
                     return null;
 
                 case Level5CompressionMethod.Lz10:
-                    return Kompression.Implementations.Compressions.Level5.Lz10;
+                    return Kompression.Compressions.Level5.Lz10.Build();
 
                 case Level5CompressionMethod.Huffman4Bit:
-                    return Kompression.Implementations.Compressions.Level5.Huffman4Bit;
+                    return Kompression.Compressions.Level5.Huffman4Bit.Build();
 
                 case Level5CompressionMethod.Huffman8Bit:
-                    return Kompression.Implementations.Compressions.Level5.Huffman8Bit;
+                    return Kompression.Compressions.Level5.Huffman8Bit.Build();
 
                 case Level5CompressionMethod.Rle:
-                    return Kompression.Implementations.Compressions.Level5.Rle;
+                    return Kompression.Compressions.Level5.Rle.Build();
 
                 case Level5CompressionMethod.ZLib:
-                    return Kompression.Implementations.Compressions.ZLib;
+                    return Kompression.Compressions.ZLib.Build();
 
                 default:
                     throw new NotSupportedException($"Unknown compression method {method}");
@@ -66,13 +64,13 @@ namespace plugin_level5.Compression
             if (method == Level5CompressionMethod.ZLib)
                 input = new SubStream(input, 4, input.Length - 4);
 
-            var configuration = GetKompressionConfiguration(method);
-            configuration.Build().Decompress(input, output);
+            ICompression? configuration = GetCompression(method);
+            configuration?.Decompress(input, output);
         }
 
         public static void Compress(Stream input, Stream output, Level5CompressionMethod method)
         {
-            var configuration = GetKompressionConfiguration(method);
+            var configuration = GetCompression(method);
             if (configuration == null)
             {
                 var compressionHeader = new[] {
@@ -96,7 +94,7 @@ namespace plugin_level5.Compression
                 output.Write(compressionHeader, 0, 4);
             }
 
-            configuration.Build().Compress(input, output);
+            configuration.Compress(input, output);
         }
     }
 }
