@@ -60,12 +60,12 @@ namespace Kuriimu2.ImGui.Forms.Formats
                 ItemSpacing = 4
             };
 
-            _saveBtn = new ImageButton { Image = ImageResources.Save, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
-            _saveAsBtn = new ImageButton { Image = ImageResources.SaveAs, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
-            _imgExportBtn = new ImageButton { Image = ImageResources.ImageExport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
-            _imgImportBtn = new ImageButton { Image = ImageResources.ImageImport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
-            _batchImgExportBtn = new ImageButton { Image = ImageResources.BatchImageExport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
-            _batchImgImportBtn = new ImageButton { Image = ImageResources.BatchImageImport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
+            _saveBtn = new ImageButton { Image = ImageResources.Save, Tooltip = LocalizationResources.MenuFileSave, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
+            _saveAsBtn = new ImageButton { Image = ImageResources.SaveAs, Tooltip = LocalizationResources.MenuFileSaveAs, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
+            _imgExportBtn = new ImageButton { Image = ImageResources.ImageExport, Tooltip = LocalizationResources.ImageMenuExport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
+            _imgImportBtn = new ImageButton { Image = ImageResources.ImageImport, Tooltip = LocalizationResources.ImageMenuImport, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
+            _batchImgExportBtn = new ImageButton { Image = ImageResources.BatchImageExport, Tooltip = LocalizationResources.ImageMenuExportBatch, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
+            _batchImgImportBtn = new ImageButton { Image = ImageResources.BatchImageImport, Tooltip = LocalizationResources.ImageMenuImportBatch, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5) };
 
             #endregion
 
@@ -91,10 +91,10 @@ namespace Kuriimu2.ImGui.Forms.Formats
                                 {
                                     _saveBtn,
                                     _saveAsBtn,
-                                    new Splitter{Length = 26},
+                                    new Splitter{Length = 26, Alignment = Alignment.Vertical},
                                     _imgExportBtn,
                                     _imgImportBtn,
-                                    new Splitter{Length = 26},
+                                    new Splitter{Length = 26, Alignment = Alignment.Vertical},
                                     _batchImgExportBtn,
                                     _batchImgImportBtn
                                 }

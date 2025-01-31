@@ -45,21 +45,24 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
 
             AddFields(fields, layout);
 
+            var okBtn = CreateOkButton();
+            AddOkButton(layout, okBtn);
+
             // Setup modal
             var modal = new DialogManagerModal(layout);
-            AddOkButton(layout, modal);
+            okBtn.Clicked += (_, _) => modal.Close(DialogResult.Ok);
 
             return modal;
         }
 
-        private void AddOkButton(TableLayout layout, Modal modal)
+        private void AddOkButton(TableLayout layout, Button okButton)
         {
             layout.Rows.Add(new TableRow
             {
                 Cells =
                 {
                     null,
-                    new TableCell(CreateOkButton(modal)) { HorizontalAlignment = HorizontalAlignment.Right }
+                    new TableCell(okButton) { HorizontalAlignment = HorizontalAlignment.Right }
                 }
             });
         }
@@ -97,12 +100,9 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
             layout.Rows.Add(row);
         }
 
-        private Button CreateOkButton(Modal modal)
+        private Button CreateOkButton()
         {
-            var button = new Button { Text = LocalizationResources.DialogManagerButtonOk, Width = 75 };
-            button.Clicked += (s, e) => modal.Close(DialogResult.Ok);
-
-            return button;
+            return new Button { Text = LocalizationResources.DialogManagerButtonOk, Width = 75 };
         }
 
         private TextBox CreateTextBox(DialogField field)
@@ -131,10 +131,8 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
         {
             public DialogManagerModal(Component content)
             {
-                var layoutWidth = content.GetWidth(Application.Instance.MainForm.Width,
-                    Application.Instance.MainForm.Height);
-                var layoutHeight = content.GetHeight(Application.Instance.MainForm.Width,
-                    Application.Instance.MainForm.Height);
+                var layoutWidth = content.GetWidth(Application.Instance.MainForm.Width, Application.Instance.MainForm.Height);
+                var layoutHeight = content.GetHeight(Application.Instance.MainForm.Width, Application.Instance.MainForm.Height);
 
                 Size = new Size(layoutWidth, layoutHeight);
                 Content = content;

@@ -19,6 +19,8 @@
     <None Remove="Resources\Images\dark\save.png" />
     <None Remove="Resources\Images\dark\save_as.png" />
     <None Remove="Resources\Images\kuriimu2.png" />
+    <None Remove="Resources\Images\light\batch_image_export.png" />
+    <None Remove="Resources\Images\light\batch_image_import.png" />
     <None Remove="Resources\Images\light\image_export.png" />
     <None Remove="Resources\Images\light\image_import.png" />
     <None Remove="Resources\Images\light\save.png" />
@@ -53,6 +55,8 @@
     <EmbeddedResource Include="Resources\Images\dark\save.png" />
     <EmbeddedResource Include="Resources\Images\dark\save_as.png" />
     <EmbeddedResource Include="Resources\Images\kuriimu2.png" />
+    <EmbeddedResource Include="Resources\Images\light\batch_image_export.png" />
+    <EmbeddedResource Include="Resources\Images\light\batch_image_import.png" />
     <EmbeddedResource Include="Resources\Images\light\image_export.png" />
     <EmbeddedResource Include="Resources\Images\light\image_import.png" />
     <EmbeddedResource Include="Resources\Images\light\save.png" />
@@ -67,17 +71,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Imgui.Forms" Version="1.3.4" />
     <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Projekte\ImGui.Forms\ImGui.Forms\ImGui.Forms.csproj" />
     <ProjectReference Include="..\..\lib\Kaligraphy.Contract\Kaligraphy.Contract.csproj" />
     <ProjectReference Include="..\..\lib\Kaligraphy\Kaligraphy.csproj" />
-    <ProjectReference Include="..\..\lib\Kanvas.Contract\Kanvas.Contract.csproj" />
-    <ProjectReference Include="..\..\lib\Kanvas\Kanvas.csproj" />
-    <ProjectReference Include="..\..\lib\Komponent.Contract\Komponent.Contract.csproj" />
-    <ProjectReference Include="..\..\lib\Komponent\Komponent.csproj" />
     <ProjectReference Include="..\..\lib\Kompression.Contract\Kompression.Contract.csproj" />
     <ProjectReference Include="..\..\lib\Kompression\Kompression.csproj" />
     <ProjectReference Include="..\..\lib\Konnect.Contract\Konnect.Contract.csproj" />

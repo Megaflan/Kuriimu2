@@ -43,6 +43,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kryptography", "src\lib\Kry
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Kryptography.Contract", "src\lib\Kryptography.Contract\Kryptography.Contract.csproj", "{CF50F653-3DDC-41E6-8A67-AAF1C317A4EC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImGui.Forms", "..\Projekte\ImGui.Forms\ImGui.Forms\ImGui.Forms.csproj", "{53251FD4-9452-49D7-B28D-DC9E386CADBA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -101,6 +103,10 @@ Global
 		{CF50F653-3DDC-41E6-8A67-AAF1C317A4EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CF50F653-3DDC-41E6-8A67-AAF1C317A4EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CF50F653-3DDC-41E6-8A67-AAF1C317A4EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53251FD4-9452-49D7-B28D-DC9E386CADBA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53251FD4-9452-49D7-B28D-DC9E386CADBA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53251FD4-9452-49D7-B28D-DC9E386CADBA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53251FD4-9452-49D7-B28D-DC9E386CADBA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

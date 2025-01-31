@@ -87,8 +87,8 @@ namespace Kuriimu2.ImGui.Forms.Formats
                 }
             };
 
-            _saveBtn = new ImageButton { Image = ImageResources.Save, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
-            _saveAsBtn = new ImageButton { Image = ImageResources.SaveAs, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
+            _saveBtn = new ImageButton { Image = ImageResources.Save, Tooltip = LocalizationResources.MenuFileSave, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
+            _saveAsBtn = new ImageButton { Image = ImageResources.SaveAs, Tooltip = LocalizationResources.MenuFileSaveAs, ImageSize = new Vector2(16, 16), Padding = new Vector2(5, 5), Enabled = false };
 
             _searchBox = new TextBox { Placeholder = LocalizationResources.ArchiveSearchPlaceholder };
             _clearButton = new ImageButton { Image = ImageResources.Close };

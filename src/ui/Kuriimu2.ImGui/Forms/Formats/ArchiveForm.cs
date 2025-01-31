@@ -292,7 +292,7 @@ namespace Kuriimu2.ImGui.Forms.Formats
             _cancelBtn.Enabled = true;
 
             _clearButton.Enabled = false;
-            _searchBox.IsReadOnly = false;
+            _searchBox.IsReadOnly = true;
         }
 
         private void _asyncOperation_Finished(object sender, EventArgs e)
@@ -300,7 +300,7 @@ namespace Kuriimu2.ImGui.Forms.Formats
             _cancelBtn.Enabled = false;
 
             _clearButton.Enabled = true;
-            _searchBox.IsReadOnly = true;
+            _searchBox.IsReadOnly = false;
         }
 
         #endregion

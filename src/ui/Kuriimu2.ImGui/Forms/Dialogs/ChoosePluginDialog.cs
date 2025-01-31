@@ -82,7 +82,7 @@ namespace Kuriimu2.ImGui.Forms.Dialogs
 
 
             dataTable.SelectedRowsChanged += DataTable_SelectedRowsChanged;
-            dataTable.DoubleClicked += DataTable_DoubleClicked; ;
+            dataTable.DoubleClicked += DataTable_DoubleClicked;
 
             return dataTable;
         }

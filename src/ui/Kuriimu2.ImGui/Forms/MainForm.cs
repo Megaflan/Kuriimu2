@@ -230,7 +230,7 @@ namespace Kuriimu2.ImGui.Forms
 
         #region File manager
 
-        private async void FileManagerOnManualSelection(object sender, ManualSelectionEventArgs e)
+        private async Task FileManagerOnManualSelection(ManualSelectionEventArgs e)
         {
             var selectedPlugin = await ChoosePlugin(e.FilePlugins.ToArray(), e.FilteredFilePlugins.ToArray(), e.SelectionStatus);
             if (selectedPlugin != null)
@@ -369,6 +369,7 @@ namespace Kuriimu2.ImGui.Forms
                 var selectedTabPage = _stateDictionary[_fileManager.GetLoadedFile(filePath)].TabPage;
                 _tabControl.SelectedPage = selectedTabPage;
 
+                ClearStatus();
                 return true;
             }
 
@@ -406,6 +407,8 @@ namespace Kuriimu2.ImGui.Forms
             if (!wasAdded)
             {
                 _fileManager.Close(loadResult.LoadedFileState);
+
+                ClearStatus();
                 return false;
             }
 

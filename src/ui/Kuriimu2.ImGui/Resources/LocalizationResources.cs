@@ -192,6 +192,8 @@ namespace Kuriimu2.ImGui.Resources
         // Menu
         public static LocalizedString ImageMenuExport => LocalizedString.FromId("Image.Menu.Export");
         public static LocalizedString ImageMenuImport => LocalizedString.FromId("Image.Menu.Import");
+        public static LocalizedString ImageMenuExportBatch => LocalizedString.FromId("Image.Menu.Export.Batch");
+        public static LocalizedString ImageMenuImportBatch => LocalizedString.FromId("Image.Menu.Import.Batch");
         public static LocalizedString ImageMenuExportPng => LocalizedString.FromId("Image.Menu.Export.Png");
         public static LocalizedString ImageMenuImportPng => LocalizedString.FromId("Image.Menu.Import.Png");
 

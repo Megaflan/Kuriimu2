@@ -145,12 +145,7 @@ namespace Kuriimu2.ImGui.Forms.Formats
             try
             {
                 await _asyncOperation.StartAsync(cts =>
-                {
-                    var img = selectedItem.ImageFile.GetImage(_state.Progress);
-                    img.SaveAsPng(sfd.SelectedPath);
-
-                    return Task.CompletedTask;
-                });
+                    Task.Run(() => selectedItem.ImageFile.GetImage(_state.Progress).SaveAsPng(sfd.SelectedPath), cts.Token));
             }
             catch (Exception ex)
             {
@@ -197,11 +192,7 @@ namespace Kuriimu2.ImGui.Forms.Formats
             try
             {
                 var newImage = Image.Load<Rgba32>(ofd.SelectedPath);
-                await _asyncOperation.StartAsync(cts =>
-                {
-                    selectedItem.ImageFile.SetImage(newImage, _state.Progress);
-                    return Task.CompletedTask;
-                });
+                await _asyncOperation.StartAsync(cts => Task.Run(() => selectedItem.ImageFile.SetImage(newImage, _state.Progress), cts.Token));
             }
             catch (Exception ex)
             {
