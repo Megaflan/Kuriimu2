@@ -11,6 +11,6 @@ namespace Kompression.DataClasses.Configuration
         public CreatePriceCalculatorDelegate? CalculatePriceDelegate { get; set; }
         public AdjustInputDelegate? AdjustInputDelegate { get; set; }
         public int SkipUnits { get; set; }
-        public UnitSize UnitSize { get; set; }
+        public UnitSize UnitSize { get; set; } = UnitSize.Byte;
     }
 }

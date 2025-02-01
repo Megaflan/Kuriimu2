@@ -113,8 +113,11 @@ namespace Kompression.Encoder.LempelZiv.MatchParser
             {
                 ILempelZivMatchFinder finder = Options.MatchFinders[i];
 
-                result[i] = Enumerable.Range(startPosition, input.Length).AsParallel().WithDegreeOfParallelism(Options.TaskCount)
-                    .AsOrdered().Select(x => finder.FindMatchesAtPosition(input, x)).ToArray();
+                result[i] = Enumerable.Range(startPosition, input.Length)
+                    .AsParallel()
+                    .AsOrdered()
+                    .WithDegreeOfParallelism(Options.TaskCount)
+                    .Select(x => finder.FindMatchesAtPosition(input, x)).ToArray();
             }
 
             return result;
