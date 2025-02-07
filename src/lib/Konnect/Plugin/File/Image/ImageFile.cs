@@ -177,6 +177,11 @@ namespace Konnect.Plugin.File.Image
             return EncodingDefinition.GetColorEncoding(imageFormat);
         }
 
+        private IEncodingInfo GetPaletteEncodingInfo(int paletteFormat)
+        {
+            return EncodingDefinition.GetPaletteEncoding(paletteFormat);
+        }
+
         #region Image methods
 
         /// <inheritdoc />
@@ -200,6 +205,7 @@ namespace Konnect.Plugin.File.Image
             var (imageData, paletteData) = EncodeImage(image, ImageInfo.ImageFormat, ImageInfo.PaletteFormat, progress);
 
             ImageInfo.BitDepth = GetEncodingInfo(ImageInfo.ImageFormat).BitDepth;
+            ImageInfo.PaletteBitDepth = GetPaletteEncodingInfo(ImageInfo.PaletteFormat).BitDepth;
             ImageInfo.ImageData = imageData.FirstOrDefault();
             ImageInfo.PaletteData = paletteData;
             ImageInfo.MipMapData = imageData.Skip(1).ToArray();

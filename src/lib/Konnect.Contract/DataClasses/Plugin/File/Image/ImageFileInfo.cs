@@ -20,6 +20,11 @@ namespace Konnect.Contract.DataClasses.Plugin.File.Image
         public required int BitDepth { get; set; }
 
         /// <summary>
+        /// The bits per pixel used in the palette data.
+        /// </summary>
+        public int PaletteBitDepth { get; set; } = -1;
+
+        /// <summary>
         /// The <see cref="Size"/> of this image.
         /// </summary>
         public required Size ImageSize { get; set; }
@@ -37,7 +42,7 @@ namespace Konnect.Contract.DataClasses.Plugin.File.Image
         /// <summary>
         /// The palette data of the main image.
         /// </summary>
-        public byte[]? PaletteData { get; set; } = null;
+        public byte[]? PaletteData { get; set; }
 
         /// <summary>
         /// The format in which the palette data is encoded.
