@@ -8,19 +8,18 @@ using Konnect.Contract.Progress;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using Kanvas.Contract.Configuration;
 
 namespace Konnect.Plugin.File.Image
 {
     public class ImageFile : IImageFile
     {
-        private Image<Rgba32> _decodedImage;
-        private Image<Rgba32> _bestImage;
+        private Image<Rgba32>? _decodedImage;
+        private IList<Rgba32>? _decodedPalette;
 
-        private IList<Rgba32> _decodedPalette;
+        private Image<Rgba32>? _bestImage;
 
         #region Properties
-
-        private int TaskCount => Environment.ProcessorCount;
 
         /// <inheritdoc />
         public IEncodingDefinition EncodingDefinition { get; }
@@ -63,131 +62,20 @@ namespace Konnect.Plugin.File.Image
 
         #endregion
 
-        protected virtual Image<Rgba32> GetDecodedImage(IProgressContext? progress = null)
-        {
-            IImageTranscoder transcoder;
-
-            if (IsIndexed)
-            {
-                transcoder = CreateImageConfiguration(ImageInfo.ImageFormat, ImageInfo.PaletteFormat)
-                    .Transcode.With(EncodingDefinition.GetIndexEncoding(ImageInfo.ImageFormat).IndexEncoding)
-                    .TranscodePalette.With(EncodingDefinition.GetPaletteEncoding(ImageInfo.PaletteFormat))
-                    .Build();
-
-                return transcoder.Decode(ImageInfo.ImageData, ImageInfo.PaletteData, ImageInfo.ImageSize);
-            }
-
-            transcoder = CreateImageConfiguration(ImageInfo.ImageFormat, ImageInfo.PaletteFormat)
-                .Transcode.With(EncodingDefinition.GetColorEncoding(ImageInfo.ImageFormat))
-                .Build();
-
-            return transcoder.Decode(ImageInfo.ImageData, ImageInfo.ImageSize);
-        }
-
-        protected virtual (byte[], byte[]) GetEncodedImage(Image<Rgba32> image, int imageFormat, int paletteFormat, IProgressContext? progress = null)
-        {
-            IImageTranscoder transcoder;
-
-            if (IsIndexed)
-            {
-                var indexEncoding = EncodingDefinition.GetIndexEncoding(imageFormat).IndexEncoding;
-                var paletteEncoding = EncodingDefinition.GetPaletteEncoding(paletteFormat);
-
-                ImageInfo.BitDepth = indexEncoding.BitDepth;
-
-                transcoder = CreateImageConfiguration(imageFormat, paletteFormat)
-                    .ConfigureQuantization(options => options.WithColorCount(indexEncoding.MaxColors))
-                    .Transcode.With(indexEncoding)
-                    .TranscodePalette.With(paletteEncoding)
-                    .Build();
-            }
-            else
-            {
-                var encoding = EncodingDefinition.GetColorEncoding(imageFormat);
-
-                ImageInfo.BitDepth = encoding.BitDepth;
-
-                transcoder = CreateImageConfiguration(imageFormat, paletteFormat)
-                    .Transcode.With(encoding)
-                    .Build();
-            }
-
-            return transcoder.Encode(image);
-        }
-
-        protected virtual byte[] GetEncodedMipMap(Image<Rgba32> image, int imageFormat, IList<Rgba32> palette, IProgressContext? progress = null)
-        {
-            IImageTranscoder transcoder;
-
-            if (IsIndexed)
-            {
-                var indexEncoding = EncodingDefinition.GetIndexEncoding(imageFormat).IndexEncoding;
-                transcoder = CreateImageConfiguration(ImageInfo.ImageFormat, ImageInfo.PaletteFormat)
-                    .ConfigureQuantization(options => options.WithColorCount(indexEncoding.MaxColors).WithPalette(() => palette))
-                    .Transcode.With(indexEncoding)
-                    .Build();
-            }
-            else
-            {
-                transcoder = CreateImageConfiguration(ImageInfo.ImageFormat, ImageInfo.PaletteFormat)
-                    .Transcode.With(EncodingDefinition.GetColorEncoding(imageFormat))
-                    .Build();
-            }
-
-            return transcoder.Encode(image).imageData;
-        }
-
-        private ImageConfigurationBuilder CreateImageConfiguration(int imageFormat, int paletteFormat)
-        {
-            var config = new ImageConfigurationBuilder();
-
-            config.IsAnchoredAt(ImageInfo.IsAnchoredAt);
-
-            if (ImageInfo.PadSize != null)
-                config.PadSize.To(ImageInfo.PadSize);
-
-            if (ImageInfo.RemapPixels != null)
-                config.RemapPixels.With(ImageInfo.RemapPixels);
-
-            if (IsIndexed)
-            {
-                if (EncodingDefinition.ContainsPaletteShader(paletteFormat))
-                    config.ShadeColors.With(() => EncodingDefinition.GetPaletteShader(paletteFormat));
-
-                var indexEncoding = EncodingDefinition.GetIndexEncoding(imageFormat).IndexEncoding;
-                config.Transcode.With(indexEncoding);
-            }
-            else
-            {
-                if (EncodingDefinition.ContainsColorShader(imageFormat))
-                    config.ShadeColors.With(() => EncodingDefinition.GetColorShader(imageFormat));
-
-                var encoding = EncodingDefinition.GetColorEncoding(imageFormat);
-                config.Transcode.With(encoding);
-            }
-
-            return config;
-        }
-
-        private IEncodingInfo GetEncodingInfo(int imageFormat)
-        {
-            if (IsIndexed)
-                return EncodingDefinition.GetIndexEncoding(imageFormat).IndexEncoding;
-
-            return EncodingDefinition.GetColorEncoding(imageFormat);
-        }
-
-        private IEncodingInfo GetPaletteEncodingInfo(int paletteFormat)
-        {
-            return EncodingDefinition.GetPaletteEncoding(paletteFormat);
-        }
+        #region Interface
 
         #region Image methods
 
         /// <inheritdoc />
         public Image<Rgba32> GetImage(IProgressContext? progress = null)
         {
-            return DecodeImage(progress);
+            if (_decodedImage != null)
+                return _decodedImage;
+
+            _decodedImage = GetDecodedImage();
+            _bestImage ??= _decodedImage;
+
+            return _decodedImage;
         }
 
         /// <inheritdoc />
@@ -202,13 +90,13 @@ namespace Konnect.Plugin.File.Image
             _decodedImage = null;
             _decodedPalette = null;
 
-            var (imageData, paletteData) = EncodeImage(image, ImageInfo.ImageFormat, ImageInfo.PaletteFormat, progress);
+            (IList<byte[]> imageData, byte[]? paletteData) = EncodeImage(image, ImageInfo.ImageFormat, ImageInfo.PaletteFormat);
 
-            ImageInfo.BitDepth = GetEncodingInfo(ImageInfo.ImageFormat).BitDepth;
-            ImageInfo.PaletteBitDepth = GetPaletteEncodingInfo(ImageInfo.PaletteFormat).BitDepth;
-            ImageInfo.ImageData = imageData.FirstOrDefault();
-            ImageInfo.PaletteData = paletteData;
+            ImageInfo.ImageData = imageData[0];
             ImageInfo.MipMapData = imageData.Skip(1).ToArray();
+
+            ImageInfo.PaletteData = paletteData;
+
             ImageInfo.ImageSize = image.Size;
 
             ImageInfo.ContentChanged = true;
@@ -218,36 +106,44 @@ namespace Konnect.Plugin.File.Image
         public void TranscodeImage(int imageFormat, IProgressContext? progress = null)
         {
             if (IsImageLocked)
-                throw new InvalidOperationException("Image cannot be transcoded to another format.");
+                throw new InvalidOperationException("Image can not be transcoded to another format.");
 
-            var paletteFormat = ImageInfo.PaletteFormat;
-            if (!IsIndexed && IsIndexEncoding(imageFormat))
-                paletteFormat = EncodingDefinition.GetIndexEncoding(imageFormat).PaletteEncodingIndices.First();
+            IndexEncodingDefinition? indexEncoding = EncodingDefinition.GetIndexEncoding(imageFormat);
 
-            TranscodeInternal(imageFormat, paletteFormat, true, progress);
+            int paletteFormat = ImageInfo.PaletteFormat;
+            if (indexEncoding != null)
+            {
+                if (indexEncoding.PaletteEncodingIndices.Count <= 0)
+                    throw new InvalidOperationException($"No palette encodings are associated with encoding 0x{imageFormat:X2}.");
+
+                if (!indexEncoding.PaletteEncodingIndices.Contains(paletteFormat))
+                    paletteFormat = indexEncoding.PaletteEncodingIndices.First();
+            }
+
+            TranscodeImage(imageFormat, paletteFormat);
         }
 
         /// <inheritdoc />
         public void SetIndexInImage(Point point, int paletteIndex)
         {
             if (!IsIndexed)
-                throw new InvalidOperationException("Image is not indexed.");
+                throw new InvalidOperationException("Palette index can only be set on an index-encoded image.");
 
-            var image = DecodeImage();
+            Image<Rgba32> image = GetImage();
             if (!IsPointInRegion(point, image.Size))
-                throw new InvalidOperationException($"Point {point} is not in image.");
+                throw new InvalidOperationException($"Point {point} is outside the image.");
 
-            var palette = DecodePalette();
+            IList<Rgba32> palette = GetPalette();
             if (paletteIndex >= palette.Count)
                 throw new InvalidOperationException($"Palette index {paletteIndex} is out of range.");
 
             image[point.X, point.Y] = palette[paletteIndex];
 
-            _decodedImage = image;
-            var (imageData, paletteData) = EncodeImage(image, ImageInfo.ImageFormat, ImageInfo.PaletteFormat);
+            (IList<byte[]> imageData, byte[]? paletteData) = EncodeImage(image, ImageInfo.ImageFormat, ImageInfo.PaletteFormat);
 
-            ImageInfo.ImageData = imageData.FirstOrDefault();
+            ImageInfo.ImageData = imageData[0];
             ImageInfo.MipMapData = imageData.Skip(1).ToArray();
+
             ImageInfo.PaletteData = paletteData;
 
             ImageInfo.ContentChanged = true;
@@ -261,25 +157,43 @@ namespace Konnect.Plugin.File.Image
         public IList<Rgba32> GetPalette(IProgressContext? progress = null)
         {
             if (!IsIndexed)
-                throw new InvalidOperationException("Image is not indexed.");
+                throw new InvalidOperationException("Palette can only be retrieved from an index-encoded image.");
 
-            return DecodePalette(progress);
+            if (ImageInfo.PaletteData == null)
+                throw new InvalidOperationException("No palette data is set for this image.");
+
+            if (_decodedPalette != null)
+                return _decodedPalette;
+
+            return _decodedPalette = GetDecodedPalette(ImageInfo.PaletteData, ImageInfo.PaletteFormat);
         }
 
         /// <inheritdoc />
         public void SetPalette(IList<Rgba32> palette, IProgressContext? progress = null)
         {
             if (!IsIndexed)
-                throw new InvalidOperationException("Image is not indexed.");
+                throw new InvalidOperationException("Palette can only be set on an index-encoded image.");
 
-            // Check for locking
-            if (IsImageLocked && GetPalette(progress).Count != palette.Count)
-                throw new InvalidOperationException("Only palettes with the same amount of colors can be set.");
+            if (IsImageLocked)
+            {
+                if (ImageInfo.PaletteData == null)
+                {
+                    if (palette.Count <= 0)
+                        return;
 
-            _decodedImage = _bestImage = null;
+                    throw new InvalidOperationException("No palette data is set for this image and image is locked.");
+                }
+
+                IList<Rgba32> decodedPalette = GetDecodedPalette(ImageInfo.PaletteData, ImageInfo.PaletteFormat);
+                if (palette.Count != decodedPalette.Count)
+                    throw new InvalidOperationException($"Only palettes with the same amount of colors can be set. (Expected color count: {decodedPalette.Count})");
+            }
+
+            _decodedImage = null;
+            _bestImage = null;
             _decodedPalette = palette;
 
-            ImageInfo.PaletteData = EncodePalette(palette, ImageInfo.PaletteFormat);
+            ImageInfo.PaletteData = GetEncodedPalette(palette, ImageInfo.PaletteFormat);
 
             ImageInfo.ContentChanged = true;
         }
@@ -288,159 +202,111 @@ namespace Konnect.Plugin.File.Image
         public void TranscodePalette(int paletteFormat, IProgressContext? progress = null)
         {
             if (!IsIndexed)
-                throw new InvalidOperationException("Image is not indexed.");
+                throw new InvalidOperationException("Palette can only be transcoded on an index-encoded image.");
 
             if (IsImageLocked)
-                throw new InvalidOperationException("Palette cannot be transcoded to another format.");
+                throw new InvalidOperationException("Palette can not be transcoded to another format.");
 
-            TranscodeInternal(ImageInfo.ImageFormat, paletteFormat, true, progress);
+            TranscodeImage(ImageInfo.ImageFormat, paletteFormat);
         }
 
         /// <inheritdoc />
         public void SetColorInPalette(int paletteIndex, Rgba32 color)
         {
             if (!IsIndexed)
-                throw new InvalidOperationException("Image is not indexed.");
+                throw new InvalidOperationException("Palette color can only be set on an index-encoded image.");
 
-            var palette = DecodePalette();
+            IList<Rgba32> palette = GetPalette();
             if (paletteIndex >= palette.Count)
                 throw new InvalidOperationException($"Palette index {paletteIndex} is out of range.");
 
             palette[paletteIndex] = color;
+
             SetPalette(palette);
         }
 
         #endregion
 
-        #region Decode methods
+        #endregion
 
-        private Image<Rgba32> DecodeImage(IProgressContext? progress = null)
+        #region Decode
+
+        #region Decode image
+
+        protected virtual Image<Rgba32> GetDecodedImage()
         {
-            if (_decodedImage != null)
-                return _decodedImage;
-
-            ExecuteActionWithProgress(() => _decodedImage = GetDecodedImage(progress), progress);
-
-            _bestImage ??= _decodedImage;
-
-            return _decodedImage;
+            return IsIndexed
+                ? GetDecodedIndexImage()
+                : GetDecodedColorImage();
         }
 
-        /// <summary>
-        /// Decode current palette from <see cref="ImageData"/>.
-        /// </summary>
-        /// <param name="context"></param>
-        /// <returns>Either buffered palette or decoded palette.</returns>
-        private IList<Rgba32> DecodePalette(IProgressContext? context = null)
+        private Image<Rgba32> GetDecodedColorImage()
         {
-            if (_decodedPalette != null)
-                return _decodedPalette;
-
-            return _decodedPalette = DecodePalette(ImageInfo.PaletteData, context);
+            IImageTranscoder transcoder = CreateColorImageConfiguration(ImageInfo.ImageFormat).Build();
+            return transcoder.Decode(ImageInfo.ImageData, ImageInfo.ImageSize);
         }
 
-        /// <summary>
-        /// Decode given palette data without buffering.
-        /// </summary>
-        /// <param name="paletteData">Palette data to decode.</param>
-        /// <param name="context"></param>
-        /// <returns>Decoded palette.</returns>
-        private IList<Rgba32> DecodePalette(byte[] paletteData, IProgressContext? context = null)
+        private Image<Rgba32> GetDecodedIndexImage()
         {
-            var paletteEncoding = EncodingDefinition.GetPaletteEncoding(ImageInfo.PaletteFormat);
-            return paletteEncoding
-                .Load(paletteData, new EncodingOptions
-                {
-                    Size = new Size(1, paletteData.Length * 8 / paletteEncoding.BitsPerValue),
-                    TaskCount = TaskCount
-                })
-                .ToArray();
+            if (ImageInfo.PaletteData == null || ImageInfo.PaletteFormat < 0)
+                throw new InvalidOperationException("Palette is not configured for an index-encoded image.");
+
+            IImageTranscoder transcoder = CreateIndexImageConfiguration(ImageInfo.ImageFormat, ImageInfo.PaletteFormat).Build();
+            return transcoder.Decode(ImageInfo.ImageData, ImageInfo.PaletteData, ImageInfo.ImageSize);
         }
 
         #endregion
 
-        #region Encode methods
+        #region Decode palette
 
-        private (IList<byte[]> imageData, byte[] paletteData) EncodeImage(Image<Rgba32> image, int imageFormat, int paletteFormat = -1, IProgressContext? progress = null)
+        private IList<Rgba32> GetDecodedPalette(byte[] paletteData, int paletteFormat)
         {
-            // Transcode image
-            byte[] mainImageData = null;
-            byte[] mainPaletteData = null;
-            ExecuteActionWithProgress(() => (mainImageData, mainPaletteData) = GetEncodedImage(image, imageFormat, paletteFormat, progress), progress);
+            IColorEncoding paletteEncoding = GetPaletteEncoding(paletteFormat);
 
-            var mipCount = ImageInfo.MipMapData?.Count ?? 0;
-            var imageData = new byte[mipCount + 1][];
-            imageData[0] = mainImageData;
-
-            // Decode palette if present, only when mip maps are needed
-            IList<Rgba32> decodedPalette = null;
-            if (mainPaletteData != null && mipCount > 0)
-                decodedPalette = DecodePalette(mainPaletteData);
-
-            // Encode mip maps
-            var (width, height) = (image.Width / 2, image.Height / 2);
-            for (var i = 0; i < mipCount; i++)
+            var options = new EncodingOptions
             {
-                imageData[i + 1] = EncodeMipMap(ResizeImage(image, width, height), imageFormat, decodedPalette);
+                Size = new Size(1, paletteData.Length * 8 / paletteEncoding.BitsPerValue),
+                TaskCount = Environment.ProcessorCount
+            };
 
-                width /= 2;
-                height /= 2;
-            }
-
-            return (imageData, mainPaletteData);
-        }
-
-        // TODO: Use progress
-        private byte[] EncodeMipMap(Image<Rgba32> mipMap, int imageFormat, IList<Rgba32> palette = null)
-        {
-            return GetEncodedMipMap(mipMap, imageFormat, palette, null);
-        }
-
-        private byte[] EncodePalette(IList<Rgba32> palette, int paletteFormat)
-        {
-            return EncodingDefinition.GetPaletteEncoding(paletteFormat)
-                .Save(palette, new EncodingOptions
-                {
-                    Size = new Size(1, palette.Count),
-                    TaskCount = TaskCount
-                });
+            return paletteEncoding.Load(paletteData, options).ToArray();
         }
 
         #endregion
 
-        private void TranscodeInternal(int imageFormat, int paletteFormat, bool checkFormatEquality, IProgressContext? progress = null)
+        #endregion
+
+        #region Encode
+
+        private (IList<byte[]> imageData, byte[]? paletteData) EncodeImage(Image<Rgba32> image, int imageFormat, int paletteFormat)
         {
-            AssertImageFormatExists(imageFormat);
-            if (IsIndexEncoding(imageFormat))
-                AssertPaletteFormatExists(paletteFormat);
-
-            if (checkFormatEquality)
-                if (ImageInfo.ImageFormat == imageFormat &&
-                    IsIndexEncoding(imageFormat) && ImageInfo.PaletteFormat == paletteFormat)
-                    return;
-
-            // Decode image
-            var decodedImage = _bestImage ?? DecodeImage(progress);
-
-            // Update format information
-            ImageInfo.ImageFormat = imageFormat;
-            ImageInfo.PaletteFormat = IsIndexEncoding(imageFormat) ? paletteFormat : -1;
+            int mipCount = ImageInfo.MipMapData?.Count ?? 0;
+            var images = new byte[mipCount + 1][];
 
             // Encode image
-            var (imageData, paletteData) = EncodeImage(decodedImage, imageFormat, paletteFormat, progress);
+            (byte[] imageData, byte[]? paletteData) = GetEncodedImage(image, imageFormat, paletteFormat);
 
-            // Set remaining image info properties
-            ImageInfo.BitDepth = GetEncodingInfo(ImageInfo.ImageFormat).BitDepth;
-            ImageInfo.ImageData = imageData.FirstOrDefault();
-            ImageInfo.MipMapData = imageData.Skip(1).ToArray();
-            ImageInfo.PaletteData = IsIndexEncoding(imageFormat) ? paletteData : null;
+            images[0] = imageData;
 
-            ImageInfo.ImageSize = decodedImage.Size;
+            // Decode palette, if present and needed for mip maps
+            IList<Rgba32>? decodedPalette = null;
+            if (paletteData != null && mipCount > 0)
+                decodedPalette = GetDecodedPalette(paletteData, paletteFormat);
 
-            _decodedImage = null;
-            _decodedPalette = null;
+            // Encode mip maps
+            (int width, int height) = (image.Width >> 1, image.Height >> 1);
+            for (var i = 0; i < mipCount; i++)
+            {
+                Image<Rgba32> mipMap = ResizeImage(image, width, height);
+                byte[] mipMapData = GetEncodedMipMap(mipMap, imageFormat, paletteFormat, decodedPalette);
 
-            ImageInfo.ContentChanged = true;
+                images[i + 1] = mipMapData;
+
+                width >>= 1;
+                height >>= 1;
+            }
+
+            return (images, paletteData);
         }
 
         private Image<Rgba32> ResizeImage(Image<Rgba32> image, int width, int height)
@@ -451,23 +317,208 @@ namespace Konnect.Plugin.File.Image
             return cloned;
         }
 
-        private void AssertImageFormatExists(int imageFormat)
+        #region Encode image
+
+        protected virtual (byte[], byte[]?) GetEncodedImage(Image<Rgba32> image, int imageFormat, int paletteFormat)
         {
-            if (EncodingDefinition.GetColorEncoding(imageFormat) == null &&
-                EncodingDefinition.GetIndexEncoding(imageFormat) == null)
-                throw new InvalidOperationException($"The image format '{imageFormat}' is not supported by the plugin.");
+            return IsIndexEncoding(imageFormat)
+                ? GetEncodedIndexImage(image, imageFormat, paletteFormat)
+                : GetEncodedColorImage(image, imageFormat);
         }
 
-        private void AssertPaletteFormatExists(int paletteFormat)
+        private (byte[], byte[]?) GetEncodedColorImage(Image<Rgba32> image, int imageFormat)
         {
-            if (EncodingDefinition.GetPaletteEncoding(paletteFormat) == null)
-                throw new InvalidOperationException($"The palette format '{paletteFormat}' is not supported by the plugin.");
+            IImageTranscoder transcoder = CreateColorImageConfiguration(imageFormat).Build();
+            return transcoder.Encode(image);
         }
 
-        protected bool IsIndexEncoding(int imageFormat)
+        private (byte[], byte[]?) GetEncodedIndexImage(Image<Rgba32> image, int imageFormat, int paletteFormat)
         {
-            return EncodingDefinition.GetIndexEncoding(imageFormat) != null;
+            IImageTranscoder transcoder = CreateIndexImageConfiguration(imageFormat, paletteFormat).Build();
+            return transcoder.Encode(image);
         }
+
+        #endregion
+
+        #region Encode mip map
+
+        protected virtual byte[] GetEncodedMipMap(Image<Rgba32> image, int imageFormat, int paletteFormat, IList<Rgba32>? palette)
+        {
+            return IsIndexEncoding(imageFormat)
+                ? GetEncodedIndexMipmap(image, imageFormat, paletteFormat, palette)
+                : GetEncodedColorMipmap(image, imageFormat);
+        }
+
+        private byte[] GetEncodedColorMipmap(Image<Rgba32> image, int imageFormat)
+        {
+            IImageTranscoder transcoder = CreateColorImageConfiguration(imageFormat).Build();
+            return transcoder.Encode(image).imageData;
+        }
+
+        private byte[] GetEncodedIndexMipmap(Image<Rgba32> image, int imageFormat, int paletteFormat, IList<Rgba32>? palette)
+        {
+            if (palette == null)
+                throw new InvalidOperationException("No palette given for mip map encoding.");
+
+            IImageTranscoder transcoder = CreateIndexImageConfiguration(imageFormat, paletteFormat, palette).Build();
+            return transcoder.Encode(image).imageData;
+        }
+
+        #endregion
+
+        #region Encode palette
+
+        private byte[] GetEncodedPalette(IList<Rgba32> palette, int paletteFormat)
+        {
+            IColorEncoding paletteEncoding = GetPaletteEncoding(paletteFormat);
+
+            var options = new EncodingOptions
+            {
+                Size = new Size(1, palette.Count),
+                TaskCount = Environment.ProcessorCount
+            };
+
+            return paletteEncoding.Save(palette, options);
+        }
+
+        #endregion
+
+        #endregion
+
+        #region Transcode
+
+        private void TranscodeImage(int imageFormat, int paletteFormat)
+        {
+            if (ImageInfo.ImageFormat == imageFormat &&
+                ImageInfo.PaletteFormat == paletteFormat)
+                return;
+
+            // Decode image
+            Image<Rgba32> decodedImage = _bestImage ?? GetDecodedImage();
+
+            // Encode image
+            (IList<byte[]> imageData, byte[]? paletteData) = EncodeImage(decodedImage, imageFormat, paletteFormat);
+
+            IEncodingInfo encodingInfo = GetEncodingInfo(imageFormat)!;
+            IEncodingInfo? paletteEncodingInfo = GetPaletteEncodingInfo(paletteFormat);
+
+            ImageInfo.BitDepth = encodingInfo.BitDepth;
+            ImageInfo.ImageData = imageData[0];
+            ImageInfo.MipMapData = imageData.Skip(1).ToArray();
+            ImageInfo.ImageFormat = imageFormat;
+
+            ImageInfo.PaletteBitDepth = paletteEncodingInfo?.BitDepth ?? -1;
+            ImageInfo.PaletteData = paletteData;
+            ImageInfo.PaletteFormat = paletteEncodingInfo != null ? paletteFormat : -1;
+
+            ImageInfo.ContentChanged = true;
+
+            _decodedImage = null;
+            _decodedPalette = null;
+        }
+
+        private IEncodingInfo? GetEncodingInfo(int imageFormat)
+        {
+            if (IsIndexEncoding(imageFormat))
+                return EncodingDefinition.GetIndexEncoding(imageFormat)?.IndexEncoding;
+
+            return EncodingDefinition.GetColorEncoding(imageFormat);
+        }
+
+        private IEncodingInfo? GetPaletteEncodingInfo(int paletteFormat)
+        {
+            return EncodingDefinition.GetPaletteEncoding(paletteFormat);
+        }
+
+        #endregion
+
+        #region Configurations
+
+        private ImageConfigurationBuilder CreateColorImageConfiguration(int imageFormat)
+        {
+            ImageConfigurationBuilder config = CreateImageConfiguration();
+
+            IColorShader? colorShader = EncodingDefinition.GetColorShader(imageFormat);
+            if (colorShader != null)
+                config.ShadeColors.With(() => colorShader);
+
+            IColorEncoding encoding = GetColorEncoding(imageFormat);
+            config.Transcode.With(encoding);
+
+            return config;
+        }
+
+        private ImageConfigurationBuilder CreateIndexImageConfiguration(int imageFormat, int paletteFormat, IList<Rgba32> palette)
+        {
+            ImageConfigurationBuilder config = CreateIndexImageConfiguration(imageFormat, paletteFormat);
+
+            config.ConfigureQuantization(options => options.WithPalette(() => palette));
+
+            return config;
+        }
+
+        private ImageConfigurationBuilder CreateIndexImageConfiguration(int imageFormat, int paletteFormat)
+        {
+            ImageConfigurationBuilder config = CreateImageConfiguration();
+
+            IColorShader? paletteShader = EncodingDefinition.GetPaletteShader(paletteFormat);
+            if (paletteShader != null)
+                config.ShadeColors.With(() => paletteShader);
+
+            IIndexEncoding encoding = GetIndexEncoding(imageFormat);
+            IIndexedImageConfigurationBuilder indexConfig = config.Transcode.With(encoding);
+
+            IColorEncoding paletteEncoding = GetPaletteEncoding(imageFormat);
+            indexConfig.TranscodePalette.With(paletteEncoding);
+
+            config.ConfigureQuantization(options => options.WithColorCount(encoding.MaxColors));
+
+            return config;
+        }
+
+        private ImageConfigurationBuilder CreateImageConfiguration()
+        {
+            var config = new ImageConfigurationBuilder();
+
+            config.IsAnchoredAt(ImageInfo.IsAnchoredAt);
+
+            if (ImageInfo.PadSize != null)
+                config.PadSize.To(ImageInfo.PadSize);
+
+            if (ImageInfo.RemapPixels != null)
+                config.RemapPixels.With(ImageInfo.RemapPixels);
+
+            return config;
+        }
+
+        private IColorEncoding GetColorEncoding(int imageFormat)
+        {
+            IColorEncoding? encoding = EncodingDefinition.GetColorEncoding(imageFormat);
+            if (encoding == null)
+                throw new InvalidOperationException($"Unknown encoding 0x{imageFormat:X2}.");
+
+            return encoding;
+        }
+
+        private IIndexEncoding GetIndexEncoding(int imageFormat)
+        {
+            IIndexEncoding? encoding = EncodingDefinition.GetIndexEncoding(imageFormat)?.IndexEncoding;
+            if (encoding == null)
+                throw new InvalidOperationException($"Unknown encoding 0x{imageFormat:X2}.");
+
+            return encoding;
+        }
+
+        private IColorEncoding GetPaletteEncoding(int paletteFormat)
+        {
+            IColorEncoding? encoding = EncodingDefinition.GetPaletteEncoding(paletteFormat);
+            if (encoding == null)
+                throw new InvalidOperationException($"Unknown palette encoding 0x{paletteFormat:X2}.");
+
+            return encoding;
+        }
+
+        #endregion
 
         private bool IsPointInRegion(Point point, Size region)
         {
@@ -475,22 +526,7 @@ namespace Konnect.Plugin.File.Image
             return rectangle.Contains(point);
         }
 
-        private void ExecuteActionWithProgress(Action action, IProgressContext? progress = null)
-        {
-            var isRunning = progress?.IsRunning();
-            if (isRunning.HasValue && !isRunning.Value)
-                progress?.StartProgress();
-
-            action();
-
-            if (isRunning.HasValue && !isRunning.Value)
-                progress?.FinishProgress();
-        }
-
-        public void Dispose()
-        {
-            _decodedImage?.Dispose();
-            _bestImage?.Dispose();
-        }
+        private bool IsIndexEncoding(int imageFormat)
+            => EncodingDefinition.ContainsIndexEncoding(imageFormat);
     }
 }

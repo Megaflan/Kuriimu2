@@ -2,7 +2,7 @@
 <package >
   <metadata>
     <id>Konnect</id>
-    <version>2.1.12</version>
+    <version>2.1.13</version>
     <description>A library containing interfaces and data models for plugins.</description>
 
     <authors>onepiecefreak;IcySon55</authors>
@@ -11,7 +11,7 @@
 
     <projectUrl>https://github.com/FanTranslatorsInternational/Kuriimu2</projectUrl>
     <icon>kuriimu2icon.png</icon>
-    <tags>Kuriimu2;API;Contract;Plugins</tags>
+    <tags>Kuriimu2;API;Plugins</tags>
 
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <license type="expression">GPL-3.0-only</license>
