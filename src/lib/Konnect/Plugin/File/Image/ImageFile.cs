@@ -468,7 +468,7 @@ namespace Konnect.Plugin.File.Image
             IIndexEncoding encoding = GetIndexEncoding(imageFormat);
             IIndexedImageConfigurationBuilder indexConfig = config.Transcode.With(encoding);
 
-            IColorEncoding paletteEncoding = GetPaletteEncoding(imageFormat);
+            IColorEncoding paletteEncoding = GetPaletteEncoding(paletteFormat);
             indexConfig.TranscodePalette.With(paletteEncoding);
 
             config.ConfigureQuantization(options => options.WithColorCount(encoding.MaxColors));
