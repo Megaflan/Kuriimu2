@@ -228,9 +228,14 @@ namespace Kuriimu2.ImGui.Forms.Formats
             if (!hasPalettes)
                 return;
 
-            if (img.EncodingDefinition.PaletteEncodings.Any())
-                foreach (var paletteEnc in img.EncodingDefinition.PaletteEncodings)
-                    _paletteBox.Items.Add(new DropDownItem<int>(paletteEnc.Key, paletteEnc.Value.FormatName));
+            foreach (var paletteFormat in indexInfo.PaletteEncodingIndices)
+            {
+                var paletteEncoding = img.EncodingDefinition.GetPaletteEncoding(paletteFormat);
+                if (paletteEncoding == null)
+                    continue;
+
+                _paletteBox.Items.Add(new DropDownItem<int>(paletteFormat, paletteEncoding.FormatName));
+            }
 
             _paletteBox.SelectedItem = _paletteBox.Items.FirstOrDefault(x => x.Content == img.ImageInfo.PaletteFormat);
         }
