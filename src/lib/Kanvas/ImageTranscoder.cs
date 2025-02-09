@@ -150,7 +150,7 @@ namespace Kanvas
                 IQuantizer quantizer = new Quantizer(_options.QuantizationOptions);
 
                 // HINT: Color shader is applied by QuantizeImage
-                (IEnumerable<int> indices, IList<Rgba32> palette) = QuantizeImage(image, paddedSize, finalSize, quantizer, swizzle);
+                (IEnumerable<int> indices, IList<Rgba32> palette) = QuantizeImage(image, finalSize, quantizer, swizzle);
 
                 // Recompose indices to colors
                 colors = indices.ToColors(palette);
@@ -197,7 +197,7 @@ namespace Kanvas
             Size finalSize = GetFinalSize(paddedSize, swizzle);
 
             IQuantizer quantizer = new Quantizer(quantizationOptions);
-            (IEnumerable<int> indices, IList<Rgba32> palette) = QuantizeImage(image, paddedSize, finalSize, quantizer, swizzle);
+            (IEnumerable<int> indices, IList<Rgba32> palette) = QuantizeImage(image, finalSize, quantizer, swizzle);
 
             // Save palette colors
             // This step can be skipped if no palette encoding is given.
@@ -222,11 +222,11 @@ namespace Kanvas
 
         #endregion
 
-        private (IEnumerable<int> indices, IList<Rgba32> palette) QuantizeImage(Image<Rgba32> image, Size paddedSize, Size finalSize,
+        private (IEnumerable<int> indices, IList<Rgba32> palette) QuantizeImage(Image<Rgba32> image, Size finalSize,
             IQuantizer quantizer, IImageSwizzle? swizzle)
         {
             // Decompose unswizzled image to colors
-            IEnumerable<Rgba32> colors = image.ToColors(paddedSize);
+            IEnumerable<Rgba32> colors = image.ToColors(finalSize);
 
             // Quantize unswizzled indices
             (IEnumerable<int> indices, IList<Rgba32> palette) = quantizer.Process(colors, finalSize);
