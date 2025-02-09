@@ -16,7 +16,8 @@ namespace plugin_level5.Image
             "IMGC",
             "IMGV",
             "IMGA",
-            "IMGN"
+            "IMGN",
+            "IMGP"
         };
 
         public Guid PluginId => Guid.Parse("79159dba-3689-448f-8343-167d58a54b2c");

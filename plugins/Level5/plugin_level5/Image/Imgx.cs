@@ -9,13 +9,9 @@ namespace plugin_level5.Image
 {
     public class Imgx
     {
-        private const int HeaderSize_ = 72;
-
         private ImgxHeader _header;
-        private byte[] _tileLegacy;
 
-        private Level5CompressionMethod _tileTableMethod;
-        private Level5CompressionMethod _imgDataMethod;
+        private byte[] _tileLegacy;
 
         public string Magic => _header.magic;
         public int BitDepth => _header.bitDepth;
@@ -26,32 +22,33 @@ namespace plugin_level5.Image
             var typeReader = new BinaryTypeReader();
             using var br = new BinaryReaderX(input);
 
-            // Header
+            // Read header
             _header = typeReader.Read<ImgxHeader>(br);
 
+            // Read info tables
+            br.BaseStream.Position = _header.paletteInfoOffset;
+            var paletteInfos = typeReader.ReadMany<ImgxPaletteInfo>(br, _header.paletteInfoCount).ToArray();
+
+            br.BaseStream.Position = _header.imageInfoOffset;
+            var imageInfos = typeReader.ReadMany<ImgxImageInfo>(br, _header.imageInfoCount).ToArray();
+
             // Get tile table
-            var tileTableComp = new SubStream(input, _header.tableDataOffset, _header.tileTableSize);
+            var tileTableComp = new SubStream(input, _header.dataOffset + imageInfos[0].tileOffset, imageInfos[0].tileSize);
             var tileTable = new MemoryStream();
             Level5Compressor.Decompress(tileTableComp, tileTable);
 
-            tileTableComp.Position = 0;
-            _tileTableMethod = (Level5CompressionMethod)(tileTableComp.ReadByte() & 0x7);
-
             // Get image data
-            var imageDataComp = new SubStream(input, _header.tableDataOffset + _header.tileTableSizePadded, _header.imgDataSize);
+            var imageDataComp = new SubStream(input, _header.dataOffset + imageInfos[0].dataOffset, imageInfos[0].dataSize);
             var imageData = new MemoryStream();
             Level5Compressor.Decompress(imageDataComp, imageData);
 
-            imageDataComp.Position = 0;
-            _imgDataMethod = (Level5CompressionMethod)(imageDataComp.ReadByte() & 0x7);
-
             // Combine tiles to full image data
             tileTable.Position = imageData.Position = 0;
-            var combinedImageStream = CombineTiles(tileTable, imageData, _header.bitDepth);
+            var combinedImageStream = CombineTiles(tileTable, imageData, _header.bytesPerTile);
 
             // Split image data and mip map data
             var images = new byte[_header.imageCount][];
-            var (width, height) = ((_header.width + 7) & ~7, (_header.height + 7) & ~7);
+            var (width, height) = (_header.width + 7 & ~7, _header.height + 7 & ~7);
             for (var i = 0; i < _header.imageCount; i++)
             {
                 images[i] = new byte[width * height * _header.bitDepth / 8];
@@ -70,6 +67,18 @@ namespace plugin_level5.Image
                 RemapPixels = context => new ImgxSwizzle(context, _header.magic)
             };
 
+            if (paletteInfos.Length > 0)
+            {
+                // Get palette
+                var paletteDataComp = new SubStream(input, _header.dataOffset + paletteInfos[0].offset, paletteInfos[0].size);
+                var paletteData = new MemoryStream();
+                Level5Compressor.Decompress(paletteDataComp, paletteData);
+
+                imageInfo.PaletteBitDepth = (int)(paletteData.Length / paletteInfos[0].colorCount) * 8;
+                imageInfo.PaletteData = paletteData.ToArray();
+                imageInfo.PaletteFormat = paletteInfos[0].format;
+            }
+
             return imageInfo;
         }
 
@@ -78,45 +87,95 @@ namespace plugin_level5.Image
             var typeWriter = new BinaryTypeWriter();
             using var bw = new BinaryWriterX(output);
 
-            // Header
+            // Update header
             _header.width = (short)imageInfo.ImageSize.Width;
             _header.height = (short)imageInfo.ImageSize.Height;
             _header.imageFormat = (byte)imageInfo.ImageFormat;
             _header.bitDepth = (byte)imageInfo.BitDepth;
+            _header.bytesPerTile = (short)(64 * imageInfo.BitDepth / 8);
+            _header.imageCount = (byte)((imageInfo.MipMapData?.Count ?? 0) + 1);
+
+            _header.paletteInfoOffset = 0x30;
+            _header.paletteInfoCount = (ushort)(imageInfo.PaletteFormat >= 0 ? 1 : 0);
+
+            _header.imageInfoOffset = _header.paletteInfoOffset;
+            if (imageInfo.PaletteFormat >= 0)
+                _header.imageInfoOffset += 0x10;
+            _header.imageInfoCount = 1;
+
+            _header.dataOffset = 0x48;
+            if (imageInfo.PaletteFormat >= 0)
+                _header.dataOffset += 0x10;
 
             // Write image data to stream
             var combinedImageStream = new MemoryStream();
+
             combinedImageStream.Write(imageInfo.ImageData);
             for (var i = 0; i < (imageInfo.MipMapData?.Count ?? 0); i++)
                 combinedImageStream.Write(imageInfo.MipMapData[i]);
 
             // Create reduced tiles and indices
-            var (imageData, tileTable) = SplitTiles(combinedImageStream, imageInfo.BitDepth);
+            var (imageData, tileTable) = SplitTiles(combinedImageStream, _header.bytesPerTile);
+
+            // Write palette data
+            int paletteOffset = _header.dataOffset;
+
+            output.Position = paletteOffset;
+            if (imageInfo.PaletteFormat >= 0)
+            {
+                Level5Compressor.Compress(new MemoryStream(imageInfo.PaletteData), output, Level5CompressionMethod.Huffman4Bit);
+                bw.WriteAlignment(4);
+            }
+
+            int paletteSize = (int)output.Position - paletteOffset;
 
             // Write tile table
-            output.Position = HeaderSize_;
-            Level5Compressor.Compress(tileTable, output, _tileTableMethod);
+            var tileOffset = (int)output.Position;
 
-            _header.tileTableSize = (int)output.Length - HeaderSize_;
-            _header.tileTableSizePadded = (_header.tileTableSize + 3) & ~3;
-
-            // Write image tiles
-            output.Position = HeaderSize_ + _header.tileTableSizePadded;
-            Level5Compressor.Compress(imageData, output, _imgDataMethod);
+            Level5Compressor.Compress(tileTable, output, Level5CompressionMethod.Huffman4Bit);
             bw.WriteAlignment(4);
 
-            _header.imgDataSize = (int)(output.Length - (HeaderSize_ + _header.tileTableSizePadded));
+            int tileSize = (int)output.Position - tileOffset;
+
+            // Write image tiles
+            var imageOffset = (int)output.Position;
+
+            Level5Compressor.Compress(imageData, output, Level5CompressionMethod.Lz10);
+            bw.WriteAlignment(4);
+
+            int imageSize = (int)output.Position - imageOffset;
 
             // Write header
-            bw.BaseStream.Position = 0;
+            output.Position = 0;
             typeWriter.Write(_header, bw);
+
+            // Write palette entries
+            if (imageInfo.PaletteFormat >= 0)
+            {
+                output.Position = _header.paletteInfoOffset;
+
+                bw.Write(paletteOffset - _header.dataOffset);
+                bw.Write(paletteSize);
+                bw.Write((short)(imageInfo.PaletteData.Length * 8 / imageInfo.PaletteBitDepth));
+                bw.Write((byte)1);
+                bw.Write((byte)imageInfo.PaletteFormat);
+                bw.Write(0);
+            }
+
+            // Write image entries
+            output.Position = _header.imageInfoOffset;
+
+            bw.Write(tileOffset - _header.dataOffset);
+            bw.Write(tileSize);
+            bw.Write(imageOffset - _header.dataOffset);
+            bw.Write(imageSize);
+            bw.Write(0L);
         }
 
-        private Stream CombineTiles(Stream tileTableStream, Stream imageDataStream, int bitDepth)
+        private Stream CombineTiles(Stream tileTableStream, Stream imageDataStream, int tileByteDepth)
         {
             using var tileTable = new BinaryReaderX(tileTableStream);
 
-            var tileByteDepth = 64 * bitDepth / 8;
             var readEntry = new Func<BinaryReaderX, int>(br => br.ReadInt16());
 
             // Read legacy head
@@ -149,10 +208,8 @@ namespace plugin_level5.Image
             return result;
         }
 
-        private (Stream imageData, Stream tileData) SplitTiles(Stream image, int bitDepth)
+        private (Stream imageData, Stream tileData) SplitTiles(Stream image, int tileByteDepth)
         {
-            var tileByteDepth = 64 * bitDepth / 8;
-
             var tileTable = new MemoryStream();
             var imageData = new MemoryStream();
             using var tileBw = new BinaryWriterX(tileTable, true);

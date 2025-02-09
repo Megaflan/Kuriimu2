@@ -4,11 +4,13 @@ using Kanvas.Contract.DataClasses;
 using Kanvas.Encoding;
 using Kanvas.Swizzle;
 using Komponent.Contract.Aspects;
+using Komponent.Contract.Enums;
 using Konnect.Contract.DataClasses.Management.Dialog;
 using Konnect.Contract.Enums.Management.Dialog;
 using Konnect.Contract.Management.Dialog;
 using Konnect.Plugin.File.Image;
 using SixLabors.ImageSharp;
+using ByteOrder = Komponent.Contract.Enums.ByteOrder;
 
 #pragma warning disable 649
 
@@ -16,30 +18,43 @@ namespace plugin_level5.Image
 {
     class ImgxHeader
     {
-        [FixedLength(4)]
-        public string magic; // IMGx
-        public int const1; // 30 30 00 00
-        public short const2; // 30 00
+        [FixedLength(6)]
+        public string magic; // IMGx00
+        public short zero0;
+        public short const1; // 30 00
         public byte imageFormat;
-        public byte const3; // 01
+        public byte const2; // 01
         public byte imageCount;
         public byte bitDepth;
         public short bytesPerTile;
         public short width;
         public short height;
-        public int const4; // 30 00 00 00
-        public int const5; // 30 00 01 00
-        public int tableDataOffset; // always 0x48
-        public int const6; // 03 00 00 00
-        public int const7; // 00 00 00 00
-        public int const8; // 00 00 00 00
-        public int const9; // 00 00 00 00
-        public int const10; // 00 00 00 00
-        public int tileTableSize;
-        public int tileTableSizePadded;
-        public int imgDataSize;
-        public int const11; // 00 00 00 00
-        public int const12; // 00 00 00 00
+        public ushort paletteInfoOffset;
+        public ushort paletteInfoCount;
+        public ushort imageInfoOffset;
+        public ushort imageInfoCount;
+        public int dataOffset;
+        public int const3;
+    }
+
+    class ImgxPaletteInfo
+    {
+        public int offset;
+        public int size;
+        public short colorCount;
+        public byte const0;
+        public byte format;
+        public int zero0;
+    }
+
+    class ImgxImageInfo
+    {
+        public int tileOffset;
+        public int tileSize;
+        public int dataOffset;
+        public int dataSize;
+        public int zero0;
+        public int zero1;
     }
 
     class ImgxSwizzle : IImageSwizzle
@@ -56,8 +71,29 @@ namespace plugin_level5.Image
 
             switch (magic)
             {
-                case "IMGC":
+                case "IMGC00":
                     _swizzle = new MasterSwizzle(Width, Point.Empty, new[] { (0, 1), (1, 0), (0, 2), (2, 0), (0, 4), (4, 0) });
+                    break;
+
+                case "IMGP00":
+                    switch (options.EncodingInfo.BitsPerValue)
+                    {
+                        case 4:
+                            _swizzle = new MasterSwizzle(Width, Point.Empty, new[] { (1, 0), (2, 0), (4, 0), (8, 0), (16, 0), (0, 1), (0, 2), (0, 4) });
+                            break;
+
+                        case 8:
+                            _swizzle = new MasterSwizzle(Width, Point.Empty, new[] { (1, 0), (2, 0), (4, 0), (8, 0), (0, 1), (0, 2), (0, 4) });
+                            break;
+
+                        case 16:
+                            _swizzle = new MasterSwizzle(Width, Point.Empty, new[] { (1, 0), (2, 0), (4, 0), (0, 1), (0, 2), (0, 4) });
+                            break;
+
+                        case 32:
+                            _swizzle = new MasterSwizzle(Width, Point.Empty, new[] { (1, 0), (2, 0), (0, 1), (0, 2), (0, 4) });
+                            break;
+                    }
                     break;
 
                 default:
@@ -77,17 +113,20 @@ namespace plugin_level5.Image
         {
             switch (magic)
             {
-                case "IMGC":
+                case "IMGC00":
                     return await GetN3dsFormats(format, bitDepth, dialogManager);
 
-                case "IMGV":
+                case "IMGV00":
                     return GetVitaFormats();
 
-                case "IMGA":
+                case "IMGA00":
                     return GetMobileFormats();
 
-                case "IMGN":
+                case "IMGN00":
                     return GetSwitchFormats();
+
+                case "IMGP00":
+                    return GetPspFormats();
 
                 default:
                     throw new InvalidOperationException($"Invalid IMGx magic {magic}.");
@@ -123,6 +162,7 @@ namespace plugin_level5.Image
         private static EncodingDefinition GetN3dsFormats1()
         {
             var encodingDefinition = new EncodingDefinition();
+
             encodingDefinition.AddColorEncoding(0x00, ImageFormats.Rgba8888());
             encodingDefinition.AddColorEncoding(0x01, ImageFormats.Rgba4444());
             encodingDefinition.AddColorEncoding(0x02, ImageFormats.Rgba5551());
@@ -144,6 +184,7 @@ namespace plugin_level5.Image
         private static EncodingDefinition GetN3dsFormats2()
         {
             var encodingDefinition = new EncodingDefinition();
+
             encodingDefinition.AddColorEncoding(0x00, ImageFormats.Rgba8888());
             encodingDefinition.AddColorEncoding(0x01, ImageFormats.Rgba4444());
             encodingDefinition.AddColorEncoding(0x02, ImageFormats.Rgba5551());
@@ -158,6 +199,22 @@ namespace plugin_level5.Image
             encodingDefinition.AddColorEncoding(0x1B, ImageFormats.Etc1(true));
             encodingDefinition.AddColorEncoding(0x1C, ImageFormats.Etc1(true));
             encodingDefinition.AddColorEncoding(0x1D, ImageFormats.Etc1A4(true));
+
+            return encodingDefinition;
+        }
+
+        private static EncodingDefinition GetPspFormats()
+        {
+            var encodingDefinition = new EncodingDefinition();
+
+            encodingDefinition.AddPaletteEncoding(0x00, ImageFormats.Rgba8888(ByteOrder.BigEndian));
+            encodingDefinition.AddPaletteEncoding(0x01, new Rgba(4, 4, 4, 4, "ARGB"));
+            encodingDefinition.AddPaletteEncoding(0x02, new Rgba(5, 5, 5, 1, "ABGR"));
+
+            encodingDefinition.AddColorEncoding(0x00, ImageFormats.Rgba8888(ByteOrder.BigEndian));
+            encodingDefinition.AddIndexEncoding(0x11, ImageFormats.I8(), new[] { 0, 1, 2 });
+            encodingDefinition.AddIndexEncoding(0x13, ImageFormats.I8(), new[] { 0, 1, 2 });
+            encodingDefinition.AddIndexEncoding(0x17, ImageFormats.I4(BitOrder.LeastSignificantBitFirst), new[] { 0, 1, 2 });
 
             return encodingDefinition;
         }

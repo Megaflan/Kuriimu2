@@ -14,6 +14,9 @@ namespace plugin_level5.Image
         private static readonly Guid KtxPluginId = Guid.Parse("d25919cc-ac22-4f4a-94b2-b0f42d1123d4");
 
         private ImgxHeader _header;
+        private ImgxPaletteInfo[] _paletteInfos;
+        private ImgxImageInfo[] _imageInfos;
+
         private Level5CompressionMethod _dataCompressionFormat;
 
         private IFileState _ktxState;
@@ -26,6 +29,13 @@ namespace plugin_level5.Image
 
             // Read header
             _header = typeReader.Read<ImgxHeader>(br);
+
+            // Read info tables
+            br.BaseStream.Position = _header.paletteInfoOffset;
+            _paletteInfos = typeReader.ReadMany<ImgxPaletteInfo>(br, _header.paletteInfoCount).ToArray();
+
+            br.BaseStream.Position = _header.imageInfoOffset;
+            _imageInfos = typeReader.ReadMany<ImgxImageInfo>(br, _header.imageInfoCount).ToArray();
 
             // Load KTX
             _imageState = await LoadKtx(input, "file.ktx", fileManager);
@@ -44,9 +54,9 @@ namespace plugin_level5.Image
                 throw new InvalidOperationException($"Could not save KTX: {saveResult.Reason}");
 
             // Compress saved Ktx to output
-            output.Position = _header.tableDataOffset;
+            output.Position = _header.dataOffset;
             Level5Compressor.Compress(saveResult.SavedStreams[0].Stream, output, _dataCompressionFormat);
-            var compressedLength = output.Length - _header.tableDataOffset;
+            var compressedLength = output.Length - _header.dataOffset;
 
             // Align file to 16 bytes
             bw.WriteAlignment(16);
@@ -55,11 +65,23 @@ namespace plugin_level5.Image
             _header.imageCount = (byte)((_imageState.Images[0].ImageInfo.MipMapData?.Count ?? 0) + 1);
             _header.width = (short)_imageState.Images[0].ImageInfo.ImageSize.Width;
             _header.height = (short)_imageState.Images[0].ImageInfo.ImageSize.Height;
-            _header.imgDataSize = (int)compressedLength;
+            
+            _imageInfos[0].dataSize = (int)compressedLength;
 
             // Write header
             output.Position = 0;
             typeWriter.Write(_header, bw);
+
+            // Write palette entries
+            if (_paletteInfos.Length > 0)
+            {
+                output.Position = _header.paletteInfoOffset;
+                typeWriter.Write(_paletteInfos[0], bw);
+            }
+
+            // Write image entries
+            output.Position = _header.imageInfoOffset;
+            typeWriter.Write(_imageInfos[0], bw);
 
             // Close Ktx
             fileManager.Close(_ktxState);
@@ -67,7 +89,7 @@ namespace plugin_level5.Image
 
         private async Task<IImageFilePluginState> LoadKtx(Stream fileStream, UPath filePath, IPluginFileManager fileManager)
         {
-            var imgData = new SubStream(fileStream, _header.tableDataOffset, _header.imgDataSize);
+            var imgData = new SubStream(fileStream, _header.dataOffset + _imageInfos[0].dataOffset, _imageInfos[0].dataSize);
             _dataCompressionFormat = Level5Compressor.PeekCompressionMethod(imgData);
 
             var ktxFile = new MemoryStream();
