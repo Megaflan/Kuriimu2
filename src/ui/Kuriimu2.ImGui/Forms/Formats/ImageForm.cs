@@ -58,6 +58,8 @@ namespace Kuriimu2.ImGui.Forms.Formats
             selectedImg?.TranscodeImage(selectedFormat, _state.Progress);
             SetImage(selectedImg, _state.Progress);
 
+            SetPaletteFormats(selectedImg);
+
             _state.FormCommunicator.Update(true, false);
             UpdateFormInternal();
         }
@@ -142,21 +144,17 @@ namespace Kuriimu2.ImGui.Forms.Formats
             SettingsResources.LastDirectory = Path.GetDirectoryName(sfd.SelectedPath);
 
             // Export image
-            try
-            {
-                await _asyncOperation.StartAsync(cts =>
-                    Task.Run(() => selectedItem.ImageFile.GetImage(_state.Progress).SaveAsPng(sfd.SelectedPath), cts.Token));
-            }
-            catch (Exception ex)
-            {
-                _state.Logger.Fatal(ex, string.Empty);
-                _state.FormCommunicator.ReportStatus(StatusKind.Failure, LocalizationResources.ImageStatusExportFailure);
-
-                UpdateFormInternal();
-                return;
-            }
+            await _asyncOperation.StartAsync(_ => selectedItem.ImageFile.GetImage(_state.Progress).SaveAsPng(sfd.SelectedPath));
 
             UpdateFormInternal();
+
+            if (!_asyncOperation.WasSuccessful)
+            {
+                _state.Logger.Fatal(_asyncOperation.Exception, string.Empty);
+                _state.FormCommunicator.ReportStatus(StatusKind.Failure, LocalizationResources.ImageStatusExportFailure);
+
+                return;
+            }
 
             _state.FormCommunicator.ReportStatus(StatusKind.Success, LocalizationResources.ImageStatusExportSuccess);
         }
@@ -189,23 +187,20 @@ namespace Kuriimu2.ImGui.Forms.Formats
             SettingsResources.LastDirectory = Path.GetDirectoryName(ofd.SelectedPath);
 
             // Import image
-            try
+            var newImage = Image.Load<Rgba32>(ofd.SelectedPath);
+            await _asyncOperation.StartAsync(_ => selectedItem.ImageFile.SetImage(newImage, _state.Progress));
+
+            UpdateFormInternal();
+
+            if (!_asyncOperation.WasSuccessful)
             {
-                var newImage = Image.Load<Rgba32>(ofd.SelectedPath);
-                await _asyncOperation.StartAsync(cts => Task.Run(() => selectedItem.ImageFile.SetImage(newImage, _state.Progress), cts.Token));
-            }
-            catch (Exception ex)
-            {
-                _state.Logger.Fatal(ex, string.Empty);
+                _state.Logger.Fatal(_asyncOperation.Exception, string.Empty);
                 _state.FormCommunicator.ReportStatus(StatusKind.Failure, LocalizationResources.ImageStatusImportFailure);
 
-                UpdateFormInternal();
                 return;
             }
 
-            // Update form
-            UpdateFormInternal();
-
+            // Set image
             SetImage(selectedItem.ImageFile, _state.Progress);
 
             _state.FormCommunicator.Update(true, false);
@@ -256,6 +251,8 @@ namespace Kuriimu2.ImGui.Forms.Formats
             _imgImportBtn.Enabled = false;
             _batchImgExportBtn.Enabled = false;
             _batchImgImportBtn.Enabled = false;
+            _formatBox.Enabled = false;
+            _paletteBox.Enabled = false;
         }
 
         private void UpdateFormInternal()
@@ -270,6 +267,9 @@ namespace Kuriimu2.ImGui.Forms.Formats
 
             _saveBtn.Enabled = canSave && _state.FileState.StateChanged;
             _saveAsBtn.Enabled = canSave && _state.FileState.StateChanged && _state.FileState.ParentFileState == null;
+
+            _formatBox.Enabled = !_asyncOperation.IsRunning;
+            _paletteBox.Enabled = !_asyncOperation.IsRunning;
         }
 
         #endregion

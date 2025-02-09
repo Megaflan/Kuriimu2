@@ -6,7 +6,7 @@ namespace Kuriimu2.ImGui.Models
 {
     class AsyncOperation
     {
-        private readonly object _runningLock = new object();
+        private readonly object _runningLock = new();
 
         private CancellationTokenSource _cts;
 
@@ -16,27 +16,33 @@ namespace Kuriimu2.ImGui.Models
         public bool IsRunning { get; private set; }
 
         public bool WasCancelled { get; private set; }
+        public bool WasSuccessful { get; private set; }
+
+        public Exception Exception { get; private set; }
 
         public async Task StartAsync(Func<CancellationTokenSource, Task> action)
         {
             // Check running condition
-            lock (_runningLock)
-            {
-                if (IsRunning)
-                    throw new InvalidOperationException("An operation is already running.");
-
-                IsRunning = true;
-                WasCancelled = false;
-
-                // Invoke StateChanged event
-                OnStarted();
-            }
+            if (!StartOperation())
+                return;
 
             // Execute async action
             _cts = new CancellationTokenSource();
             try
             {
-                await Task.Run(async () => await action(_cts));
+                await Task.Run(async () =>
+                {
+                    try
+                    {
+                        await action(_cts);
+
+                        WasSuccessful = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Exception = ex;
+                    }
+                }, _cts.Token);
             }
             catch (TaskCanceledException)
             {
@@ -44,6 +50,67 @@ namespace Kuriimu2.ImGui.Models
             }
 
             // Reset running condition
+            FinalizeOperation();
+        }
+
+        public async Task StartAsync(Action<CancellationTokenSource> action)
+        {
+            // Check running condition
+            if (!StartOperation())
+                return;
+
+            // Execute async action
+            _cts = new CancellationTokenSource();
+            try
+            {
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        action(_cts);
+
+                        WasSuccessful = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Exception = ex;
+                    }
+                }, _cts.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                // Ignore cancellation
+            }
+
+            // Reset running condition
+            FinalizeOperation();
+        }
+
+        public void Cancel()
+        {
+            _cts?.Cancel();
+        }
+
+        private bool StartOperation()
+        {
+            lock (_runningLock)
+            {
+                if (IsRunning)
+                    return false;
+
+                IsRunning = true;
+                WasCancelled = false;
+                WasSuccessful = false;
+
+                // Invoke StateChanged event
+                OnStarted();
+            }
+
+            return true;
+        }
+
+        private void FinalizeOperation()
+        {
             lock (_runningLock)
             {
                 IsRunning = false;
@@ -52,11 +119,6 @@ namespace Kuriimu2.ImGui.Models
                 // Invoke StateChanged event
                 OnFinished();
             }
-        }
-
-        public void Cancel()
-        {
-            _cts?.Cancel();
         }
 
         private void OnStarted()

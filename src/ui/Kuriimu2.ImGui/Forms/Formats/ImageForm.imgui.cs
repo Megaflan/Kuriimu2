@@ -5,6 +5,7 @@ using ImGui.Forms.Controls;
 using ImGui.Forms.Controls.Layouts;
 using ImGui.Forms.Models;
 using ImGui.Forms.Resources;
+using Konnect.Contract.DataClasses.Plugin.File.Image;
 using Konnect.Contract.Plugin.File.Image;
 using Konnect.Contract.Progress;
 using Kuriimu2.ImGui.Components;
@@ -219,7 +220,9 @@ namespace Kuriimu2.ImGui.Forms.Formats
             if (img == null)
                 return;
 
-            var hasPalettes = img.EncodingDefinition.PaletteEncodings.Any();
+            IndexEncodingDefinition? indexInfo = img.EncodingDefinition.GetIndexEncoding(img.ImageInfo.ImageFormat);
+
+            var hasPalettes = indexInfo is { PaletteEncodingIndices.Count: > 0 };
             _paletteBox.Visible = _paletteTextLbl.Visible = hasPalettes;
 
             if (!hasPalettes)

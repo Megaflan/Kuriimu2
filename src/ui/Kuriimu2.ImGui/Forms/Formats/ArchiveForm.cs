@@ -813,8 +813,6 @@ namespace Kuriimu2.ImGui.Forms.Formats
                     _formInfo.FormCommunicator.Rename(fileEntry.ArchiveFile, newPath);
                     _fileSystem.MoveFile(fileEntry.Path, newPath);
                 }
-
-                return Task.CompletedTask;
             });
 
             node.Text = newName;
@@ -994,8 +992,6 @@ namespace Kuriimu2.ImGui.Forms.Formats
 
                     AddChangedDirectory(file.FilePath.GetDirectory());
                 }
-
-                return Task.CompletedTask;
             });
 
             _formInfo.Progress.ReportProgress(LocalizationResources.ArchiveProgressDelete, 1, 1);
@@ -1039,8 +1035,6 @@ namespace Kuriimu2.ImGui.Forms.Formats
 
                     _fileSystem.DeleteFile(nodePath / filePath);
                 }
-
-                return Task.CompletedTask;
             });
 
             // Execute final deletions
