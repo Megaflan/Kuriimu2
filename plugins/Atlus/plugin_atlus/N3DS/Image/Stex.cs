@@ -1,32 +1,35 @@
-﻿using System.Drawing;
-using System.IO;
-using System.Text;
+﻿using Kanvas;
 using Kanvas.Swizzle;
 using Komponent.IO;
-using Kontract.Models.Image;
+using Konnect.Contract.DataClasses.Plugin.File.Image;
+using Kryptography.Checksum.Crc;
+using SixLabors.ImageSharp;
+using System.Text;
 
-namespace plugin_atlus.Images
-{ 
-    /* Original understanding by xdaniel and his tool Tharsis
-     * https://github.com/xdanieldzd/Tharsis */
-
-    class Stex
+namespace plugin_atlus.N3DS.Image
+{
+    public class Stex
     {
-        private static readonly int HeaderSize = Tools.MeasureType(typeof(StexHeader));
-        private static readonly int EntrySize = Tools.MeasureType(typeof(StexEntry));
+        private static readonly int HeaderSize = 32;
+        private static readonly int EntrySize = 8;
+        private static int unk1;
 
-        public ImageInfo Load(Stream input)
+        public ImageFileInfo Load(Stream input)
         {
+            var typeReader = new BinaryTypeReader();
             using var br = new BinaryReaderX(input);
-
+            
             // Read header
-            var header = br.ReadType<StexHeader>();
+            var header = typeReader.Read<StexHeader>(br);
 
             // Read entry
-            var entry = br.ReadType<StexEntry>();
+            var entry = typeReader.Read<StexEntry>(br);
+
+            // Quick hack (We will probably replace this in the future)
+            unk1 = entry.unk1;
 
             // Read name
-            var name = br.ReadCStringASCII();
+            var name = br.ReadString();
 
             // Create image info
             input.Position = entry.offset;
@@ -34,17 +37,22 @@ namespace plugin_atlus.Images
 
             var format = (header.dataType << 16) | header.imageFormat;
 
-            var imageInfo = new StexImageInfo(imageData, (int)format, new Size(header.width, header.height), entry)
+            var imageInfo = new ImageFileInfo
             {
-                Name = name
+                Name = name,
+                BitDepth = imageData.Length * 8 / (header.width * header.height),
+                ImageData = imageData,
+                ImageFormat = (int)format,
+                ImageSize = new Size(header.width, header.height),
+                RemapPixels = context => new CtrSwizzle(context),
             };
-            imageInfo.RemapPixels.With(context => new CtrSwizzle(context));
 
-            return imageInfo;
+            return imageInfo;            
         }
 
-        public void Save(Stream output, ImageInfo imageInfo)
+        public void Save(Stream output, ImageFileInfo imageInfo)
         {
+            var typeWriter = new BinaryTypeWriter();
             using var bw = new BinaryWriterX(output);
 
             // Calculate offsets
@@ -62,11 +70,11 @@ namespace plugin_atlus.Images
 
             // Write entry
             output.Position = entryOffset;
-            bw.WriteType(new StexEntry
+            typeWriter.Write(new StexEntry
             {
                 offset = dataOffset,
-                unk1 = (imageInfo as StexImageInfo).Entry.unk1
-            });
+                unk1 = unk1
+            }, bw);
 
             // Write header
             var header = new StexHeader
@@ -79,7 +87,7 @@ namespace plugin_atlus.Images
             };
 
             output.Position = 0;
-            bw.WriteType(header);
+            typeWriter.Write(header, bw);
         }
     }
 }
